@@ -1,0 +1,1794 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<!-- SANS cette balise, le téléphone rend la page en largeur bureau (≈785 px)
+     puis la réduit : tout devient minuscule. C'est la ligne la plus
+     importante du fichier pour un outil de terrain. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#E8B000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tournée PAV">
+<!-- Sans ces trois lignes, « Sur l'écran d'accueil » fabrique l'icône à partir
+     d'une capture de la page : illisible en 60 px. -->
+<link rel="icon" href="favicon.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Tournée PAV</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Colonne unique : bandeau d'état en haut, bouton dans la zone du pouce, tournée en dessous. */
+/* Fourni par la plateforme d'artifact, absent d'une page autonome : sans lui
+   les paddings s'ajoutent à la largeur et la page déborde de 32 px. */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Dégage les encoches et la barre de geste, maintenant que la page est en
+   viewport-fit=cover. */
+:root {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+:root {
+  --bg: #E8EAE6; --surface: #FFFFFF; --ink: #1A1F1C; --muted: #6A716B;
+  --line: #CFD4CD; --signal: #E8B000; --signal-ink: #2A2000;
+  --ok: #2E7D4F; --warn: #C97A14; --alert: #B3382C;
+  --font-ui: "Barlow", system-ui, sans-serif;
+  --font-label: "Barlow Condensed", "Barlow", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141714; --surface: #1E221F; --ink: #E9EDE8; --muted: #9AA39B;
+  --line: #30362F; --signal: #F2C230; --signal-ink: #241B00;
+  --ok: #5FBE85; --warn: #E8A94A; --alert: #E8766A; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #141714; --surface: #1E221F; --ink: #E9EDE8; --muted: #9AA39B;
+  --line: #30362F; --signal: #F2C230; --signal-ink: #241B00;
+  --ok: #5FBE85; --warn: #E8A94A; --alert: #E8766A; color-scheme: dark;
+}
+/* Indispensable hors plateforme d'artifact : les règles de classe ci-dessous
+   (.flash, .imp en display:flex) l'emportent sinon sur le display:none que
+   le navigateur applique à l'attribut hidden, et les blocs masqués
+   s'affichent vides. */
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-ui);
+  font-size: 16px; line-height: 1.45; margin: 0;
+  display: flex; flex-direction: column;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+.wrap {
+  flex: 1; display: flex; flex-direction: column; gap: 14px;
+  width: 100%; max-width: 32rem; margin: 0 auto; min-width: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 24px;
+}
+.eyebrow {
+  font-family: var(--font-label); text-transform: uppercase;
+  letter-spacing: .09em; font-size: .8rem; font-weight: 600; color: var(--muted);
+}
+.bar {
+  background: var(--surface); border-bottom: 1px solid var(--line);
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 9;
+  margin-bottom: 2px;
+}
+.bar-in {
+  width: 100%; max-width: 32rem; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 10px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+/* Alerte : points sans photo depuis trop longtemps. Orange, comme une tâche
+   à faire, pas rouge : rien n'est cassé. */
+.retard {
+  background: color-mix(in srgb, var(--warn) 14%, var(--surface));
+  border: 2px solid var(--warn); border-radius: 14px;
+  padding: 12px 12px 10px; display: flex; flex-direction: column; gap: 8px;
+}
+.retard-t { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 1.05rem; color: var(--ink); }
+.retard-t svg { width: 22px; height: 22px; flex: none; color: var(--warn); }
+.retard-s { margin: -4px 0 0 31px; font-size: .82rem; color: var(--muted); }
+.retard-l { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.retard-l button {
+  appearance: none; cursor: pointer; width: 100%; min-height: 48px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 12px; font-family: var(--font-ui); font-size: .95rem; font-weight: 500;
+}
+.retard-l button:active { background: var(--bg); }
+.retard-l .j { font-family: var(--font-mono); font-size: .82rem; color: var(--warn); flex: none; }
+.tag-r {
+  font-family: var(--font-label); text-transform: uppercase; letter-spacing: .04em;
+  font-size: .72rem; font-weight: 600; padding: 2px 7px; border-radius: 999px; flex: none;
+  background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn);
+}
+/* :not(.vgs) pour peser autant que la règle de base des lignes, :not(.here)
+   pour laisser le point sélectionné garder sa bordure jaune. */
+.round li.retard-p:not(.here):not(.vgs) > button { border-color: var(--warn); border-width: 1.5px; }
+.ver { margin: 4px 0 0; text-align: center; font-family: var(--font-mono); font-size: .72rem; color: var(--muted); }
+.bar-d { display: flex; align-items: center; gap: 10px; flex: none; }
+.logo { height: 28px; width: auto; max-width: 72px; object-fit: contain; border-radius: 4px; display: block; }
+.count { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: .95rem; }
+.count b { font-size: 1.3rem; font-weight: 500; }
+.track { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.track > i { display: block; height: 100%; background: var(--ok); width: 0; transition: width .35s ease; }
+
+.point {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 16px; display: flex; flex-direction: column; gap: 4px;
+}
+.point h1 { font-size: 1.45rem; font-weight: 600; margin: 0; text-wrap: balance; line-height: 1.2; }
+.code { font-family: var(--font-mono); font-size: .9rem; color: var(--muted); }
+.gps { font-family: var(--font-mono); font-size: .8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.flux { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip {
+  font-family: var(--font-label); text-transform: uppercase; letter-spacing: .05em;
+  font-size: .75rem; font-weight: 600; padding: 3px 8px; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--muted);
+}
+
+.shoot {
+  appearance: none; border: 0; cursor: pointer; width: 100%;
+  background: var(--signal); color: var(--signal-ink);
+  font-family: var(--font-ui); font-size: 1.25rem; font-weight: 600;
+  padding-block: 26px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  box-shadow: 0 2px 0 rgba(0,0,0,.18);
+}
+.shoot:disabled { opacity: .45; cursor: default; box-shadow: none; }
+.shoot:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+.shoot svg { width: 28px; height: 28px; flex: none; }
+/* Tant qu'aucun point n'est choisi, c'est LE geste à faire : le bouton prend
+   plus de place et bat doucement, pour qu'on ne cherche pas quoi toucher. */
+.shoot.choisir { padding-block: 34px; font-size: 1.35rem; animation: respire 2.4s ease-in-out infinite; }
+.shoot.choisir svg { width: 32px; height: 32px; }
+#ic-point { display: none; }
+.shoot.choisir #ic-photo { display: none; }
+.shoot.choisir #ic-point { display: block; }
+@keyframes respire {
+  0%, 100% { box-shadow: 0 2px 0 rgba(0,0,0,.18); }
+  50%      { box-shadow: 0 2px 0 rgba(0,0,0,.18), 0 0 0 7px color-mix(in srgb, var(--signal) 26%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) { .shoot.choisir { animation: none; } }
+.hint { font-size: .85rem; color: var(--muted); text-align: center; margin: -6px 0 0; }
+
+/* Même gabarit que le bouton principal — c'est la deuxième façon d'alimenter
+   la tournée, pas un lien discret. Fond clair pour qu'elle reste seconde. */
+.shoot.second {
+  background: var(--surface); color: var(--ink);
+  border: 2px solid var(--signal); box-shadow: none;
+  font-size: 1.1rem; padding-block: 20px;
+}
+.shoot.second:active { transform: translateY(1px); }
+
+.busy {
+  display: flex; align-items: center; gap: 11px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 12px 14px; font-size: .92rem; color: var(--ink);
+}
+.busy i {
+  flex: none; width: 20px; height: 20px; border-radius: 50%;
+  border: 2.5px solid var(--line); border-top-color: var(--signal);
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .busy i { animation: none; } }
+.imp { display: flex; flex-direction: column; gap: 10px; }
+.imp-t { font-family: var(--font-label); text-transform: uppercase; letter-spacing: .09em;
+  font-size: .8rem; font-weight: 600; color: var(--muted); }
+.imp-i {
+  display: flex; gap: 12px; align-items: center;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 10px 12px; min-width: 0;
+}
+.imp-i img { width: 54px; height: 54px; object-fit: cover; border-radius: 8px; flex: none; }
+.imp-v {
+  width: 54px; height: 54px; border-radius: 8px; flex: none;
+  display: grid; place-items: center; background: var(--bg);
+  border: 1px dashed var(--line); color: var(--muted); font-family: var(--font-mono);
+}
+.imp-c { display: flex; flex-direction: column; gap: 5px; min-width: 0; flex: 1; }
+.imp-h { font-family: var(--font-mono); font-size: .78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.imp-i select {
+  font-family: var(--font-ui); font-size: .92rem; font-weight: 500; color: var(--ink);
+  background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  padding: 7px 8px; width: 100%; max-width: 100%;
+}
+.imp-i.auto { border-color: var(--ok); }
+.imp-i.auto .imp-h { color: var(--ok); }
+.imp-all {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface); border: 1px solid var(--signal); border-radius: 12px;
+  padding: 10px 12px;
+}
+.imp-all label { font-size: .9rem; font-weight: 600; color: var(--ink); flex: none; }
+.imp-all select {
+  font-family: var(--font-ui); font-size: .92rem; font-weight: 500; color: var(--ink);
+  background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px; flex: 1; min-width: 0;
+}
+.imp-a { display: flex; gap: 8px; flex-wrap: wrap; }
+.imp-a button { flex: 1 1 auto; }
+.q-l { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.q-sub { font-size: .78rem; color: var(--muted); }
+.q-btn {
+  appearance: none; cursor: pointer; flex: none;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 999px;
+  font-family: var(--font-ui); font-size: .85rem; font-weight: 600;
+  padding: 7px 15px;
+}
+.q-btn:disabled { opacity: .5; cursor: default; }
+.shoot.envoi { background: var(--ok); color: #06240f; }
+.shoot.envoi:disabled { opacity: .45; }
+.queue.actif { border-style: solid; border-color: var(--signal); }
+.flash {
+  background: var(--surface); border: 1px solid var(--ok); border-left: 4px solid var(--ok);
+  border-radius: 0 12px 12px 0; padding: 12px 14px;
+  display: flex; align-items: center; gap: 12px;
+}
+.flash .t { min-width: 0; }
+.flash strong { font-weight: 600; display: block; }
+.flash span { font-size: .85rem; color: var(--muted); }
+
+.round { display: flex; flex-direction: column; gap: 8px; }
+.round li { min-width: 0; }
+/* Chaque point est une vraie cible : fond, bordure, coin arrondi et 64 px de
+   haut au minimum. Une ligne de texte séparée d'un filet se touche mal avec
+   des gants ou un doigt large, et rien n'y dit qu'elle est cliquable — d'où
+   aussi le chevron à droite. */
+.round li:not(.vgs) > button {
+  appearance: none; cursor: pointer; width: 100%; min-height: 64px;
+  display: flex; align-items: center; gap: 11px; text-align: left;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 15px; font-family: var(--font-ui); font-size: 1rem;
+  color: inherit; font-weight: inherit; min-width: 0;
+}
+.round li:not(.vgs) > button::after {
+  content: ""; width: 8px; height: 8px; flex: none; opacity: .55;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg); margin-left: 1px;
+}
+.round li.here > button { border-color: var(--signal); border-width: 2px; padding: 13px 14px; }
+.round li:not(.vgs) > button:active { background: color-mix(in srgb, var(--signal) 14%, var(--surface)); }
+
+/* ── photos d'un point ─────────────────────────────────────────────────── */
+.round li.vgs { padding: 4px 2px 8px; }
+.vg-liste { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+.vg { position: relative; margin: 0; flex: none; width: 72px; }
+.vg img { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; display: block; background: var(--bg); }
+.vg figcaption { font-family: var(--font-mono); font-size: .72rem; color: var(--muted); text-align: center; margin-top: 3px; }
+.vg-x {
+  position: absolute; top: -6px; right: -6px; width: 26px; height: 26px;
+  display: grid; place-items: center; cursor: pointer;
+  border: 2px solid var(--bg); border-radius: 50%;
+  background: var(--alert); color: #fff; font-size: 1rem; line-height: 1; padding: 0;
+}
+.vg img { cursor: zoom-in; }
+.loupe {
+  position: fixed; inset: 0; z-index: 50; background: #000;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  gap: 14px;
+}
+.loupe img { max-width: 100%; max-height: 78vh; object-fit: contain; border-radius: 8px; }
+.loupe-t { text-align: center; color: #fff; }
+.loupe-t strong { display: block; font-weight: 600; }
+.loupe-t span { font-family: var(--font-mono); font-size: .85rem; color: #b9b9b9; }
+#loupe-x {
+  position: absolute; top: max(12px, env(safe-area-inset-top)); right: 12px;
+  width: 44px; height: 44px; display: grid; place-items: center; cursor: pointer;
+  border: 0; border-radius: 50%; background: rgba(255,255,255,.14); color: #fff;
+  font-size: 1.6rem; line-height: 1; padding: 0;
+}
+.vg-all {
+  appearance: none; border: 0; background: none; cursor: pointer;
+  font-family: var(--font-ui); font-size: .85rem; color: var(--muted);
+  text-decoration: underline; text-underline-offset: 3px;
+  padding: 10px 0 0; display: block;
+}
+/* Effacer n'est pas un lien discret : c'est un bouton, et il porte la couleur
+   de ce qu'il fait. Bordé plutôt que plein, pour ne pas rivaliser avec les
+   deux actions du haut. */
+.raz {
+  appearance: none; cursor: pointer; margin: 18px auto 0;
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  background: var(--surface); color: var(--alert);
+  border: 1.5px solid color-mix(in srgb, var(--alert) 55%, transparent);
+  border-radius: 12px; padding: 13px 20px;
+  font-family: var(--font-ui); font-size: .95rem; font-weight: 600;
+}
+.raz svg { width: 19px; height: 19px; flex: none; }
+.raz:active { background: color-mix(in srgb, var(--alert) 10%, var(--surface)); }
+/* Deux actions au pied de la liste : effacer, et aller voir ce que les relevés
+   ont produit. La rangée reste centrée même quand « Tout effacer » est caché —
+   c'est le cas le plus fréquent, tournée terminée. */
+.actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 18px; }
+.actions .raz { margin: 0; }
+.meteo-l {
+  appearance: none; cursor: pointer; text-decoration: none;
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  background: var(--surface); color: var(--ink);
+  border: 1.5px solid var(--line); border-radius: 12px; padding: 13px 20px;
+  font-family: var(--font-ui); font-size: .95rem; font-weight: 600;
+}
+.meteo-l svg { width: 19px; height: 19px; flex: none; color: var(--muted); }
+.meteo-l:active { background: var(--bg); }
+.round { list-style: none; padding: 0; margin: 0; }
+.round .nm { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.round .cd { font-family: var(--font-mono); font-size: .8rem; color: var(--muted); flex: none; }
+.dot { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--line); flex: none; }
+.round li.done { color: var(--muted); }
+.round li.done .dot { background: var(--ok); border-color: var(--ok); }
+.round li.here .dot { background: var(--signal); border-color: var(--signal); box-shadow: 0 0 0 3px color-mix(in srgb, var(--signal) 28%, transparent); }
+/* Tout parti : la pastille devient une coche. Elle passe AVANT la pastille du
+   point courant, sinon l'état disparaît dès qu'on se tient sur l'îlot — le
+   moment où l'on a justement besoin de savoir si quelque chose reste. */
+.round li.envoye .dot {
+  background: none; border: 0; box-shadow: none; width: 13px; height: 13px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235FBE85' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+  background-size: contain; background-repeat: no-repeat; background-position: center;
+}
+.round li.here { font-weight: 600; }
+
+.queue {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  font-size: .85rem; color: var(--muted);
+  border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px;
+}
+/* Posée en absolu : la barre apparaît et disparaît sans décaler le texte. */
+.q-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--line); }
+.q-bar b {
+  display: block; height: 100%; width: 100%; background: var(--ok);
+  transform-origin: left; transform: scaleX(0); transition: transform .25s linear;
+}
+.queue b { font-family: var(--font-mono); color: var(--ink); font-weight: 500; }
+.note {
+  font-size: .82rem; color: var(--muted); border-left: 3px solid var(--warn);
+  padding: 8px 0 8px 12px; border-radius: 0;
+}
+.note code { font-family: var(--font-mono); font-size: .95em; }
+/* Désaccord entre le point affiché et le GPS. Rouge, parce qu'une photo
+   rangée au mauvais îlot ne se voit qu'une fois publiée. */
+.discord {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
+  margin-top: 12px; padding: 10px 12px; border-radius: 8px;
+  background: color-mix(in srgb, var(--alert) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--alert) 40%, transparent);
+  font-size: .82rem; line-height: 1.35;
+}
+.discord button {
+  border: 1px solid var(--alert); background: transparent; color: var(--alert);
+  font: inherit; font-weight: 600; padding: 5px 11px; border-radius: 999px; cursor: pointer;
+}
+:is(button, [tabindex]):focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ── Partage de l'application ──────────────────────────────────────────────
+   Le QR est écrit en dur dans la page : aucune bibliothèque à charger, donc
+   il s'affiche aussi en bord de route sans réseau. */
+.share-l {
+  appearance: none; cursor: pointer; margin: 4px auto 2px;
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  background: var(--surface); color: var(--muted);
+  border: 1px solid var(--line); border-radius: 12px; padding: 11px 18px;
+  font-family: var(--font-ui); font-size: .9rem; font-weight: 600;
+}
+.share-l svg { width: 18px; height: 18px; flex: none; }
+.share-l:active { background: var(--bg); color: var(--ink); }
+.code-i {
+  width: 100%; padding: 12px 14px; border: 1.5px solid var(--line); border-radius: 10px;
+  background: var(--bg); color: var(--ink); text-align: center;
+  font-family: var(--font-mono); font-size: 1.05rem; letter-spacing: .08em;
+}
+.code-i:focus { outline: 2px solid var(--signal); outline-offset: 1px; }
+.code-r { display: flex; gap: 8px; align-items: stretch; }
+.code-r .code-i { flex: 1; min-width: 0; }
+.code-v {
+  appearance: none; cursor: pointer; flex: none; padding: 0 12px;
+  background: var(--surface); color: var(--muted);
+  border: 1.5px solid var(--line); border-radius: 10px;
+  font-family: var(--font-ui); font-size: .82rem; font-weight: 600;
+}
+.code-v:active { background: var(--bg); color: var(--ink); }
+.code-m { margin: 0; font-size: .82rem; color: var(--muted); min-height: 1.1em; }
+.sheet {
+  position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.62);
+  display: flex; align-items: center; justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+}
+.sheet-c {
+  background: var(--surface); color: var(--ink); border-radius: 16px;
+  width: 100%; max-width: 21rem; padding: 20px; text-align: center;
+  display: flex; flex-direction: column; gap: 13px;
+  max-height: 100%; overflow: auto;
+}
+.sheet-c h2 {
+  font-family: var(--font-label); text-transform: uppercase;
+  letter-spacing: .07em; font-size: 1.05rem; margin: 0;
+}
+/* Noir sur blanc même en thème sombre : c'est le contraste que les appareils
+   photo savent lire, pas celui du thème. */
+.qr { background: #fff; border-radius: 10px; padding: 12px; margin: 0 auto; width: 100%; max-width: 14rem; }
+.qr svg { display: block; width: 100%; height: auto; }
+.sheet-u {
+  font-family: var(--font-mono); font-size: .9rem; overflow-wrap: anywhere; margin: 0;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 9px; padding: 9px 10px;
+}
+.sheet-h { font-size: .85rem; color: var(--muted); margin: 0; }
+.sheet-a { display: flex; flex-direction: column; gap: 8px; }
+.sheet-a .q-btn { width: 100%; padding: 12px 15px; font-size: .95rem; }
+.sheet-a .q-btn.prim { background: var(--signal); color: var(--signal-ink); border-color: transparent; }
+</style>
+</head>
+<body>
+
+<div class="bar"><div class="bar-in">
+  <span class="eyebrow" id="day">Relevé</span>
+  <span class="bar-d">
+<span class="count" id="compte">—</span>
+<img class="logo" id="logo" alt="" hidden>
+</span>
+</div></div>
+
+<div class="wrap">
+
+  <!-- En tête de page : tant que des photos attendent, c'est la première
+       chose qu'on voit. Masqué dès que la file est vide, pour ne pas occuper
+       la place en permanence. -->
+  <button type="button" class="shoot envoi" id="q-send" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
+    <span id="q-send-lbl">Envoyer</span>
+  </button>
+
+  <!-- Points sans photo depuis alerteJours (config.json) : calculé à partir des
+     observations de donnees.json. Masqué quand tout est à jour. -->
+<div class="retard" id="retard" role="alert" hidden>
+<div class="retard-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg><span id="retard-titre"></span></div>
+<p class="retard-s" id="retard-s"></p>
+<ul class="retard-l" id="retard-l"></ul>
+</div>
+
+<div class="point">
+    <span class="eyebrow" id="state-lbl">Recherche du point…</span>
+    <h1 id="site-nm">—</h1>
+    <span class="code" id="site-cd"></span>
+    <div class="flux" id="site-flux"></div>
+    <span class="gps" id="gps-txt">GPS en cours d'acquisition</span>
+    <!-- Visible seulement quand le point affiché contredit le GPS : c'est le
+         seul moment où une photo risque d'être rangée au mauvais endroit. -->
+    <div class="discord" id="discord" hidden>
+      <span id="discord-t"></span>
+      <button type="button" id="discord-b"></button>
+    </div>
+  </div>
+
+
+  <button class="shoot" id="shoot">
+    <svg id="ic-photo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    <svg id="ic-point" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    <span id="shoot-lbl">Photographier</span>
+  </button>
+  <p class="hint" id="hint">Photographie chaque point, même quand tout va bien.</p>
+  <button type="button" class="shoot second" id="galerie">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+    <span>Importer depuis la galerie</span>
+  </button>
+
+  <div class="imp" id="import" hidden>
+    <span class="imp-t" id="imp-t">Photos à associer</span>
+    <div class="imp-all">
+      <label for="imp-tout">Tout mettre sur</label>
+      <select id="imp-tout"><option value="">— choisir un point —</option></select>
+    </div>
+    <div class="imp" id="imp-list"></div>
+    <div class="imp-a">
+      <button type="button" class="q-btn" id="imp-no">Annuler</button>
+    </div>
+    <p class="hint" style="text-align:left;margin-top:2px">
+      Ces photos n'ont pas pu être rattachées seules. Désigne leur point —
+      ici ou dans la liste ci-dessous : elles sont enregistrées aussitôt.
+    </p>
+  </div>
+
+  <div class="busy" id="busy" hidden><i aria-hidden="true"></i><span id="busy-txt">Enregistrement…</span></div>
+
+  <!-- Ne sert plus qu'à confirmer une suppression : les photos, elles, se
+       regardent sous leur point. -->
+  <div class="flash" id="flash" hidden>
+    <div class="t"><strong id="flash-t"></strong><span id="flash-s"></span></div>
+  </div>
+
+  <div>
+    <span class="eyebrow">Points de collecte — appuie pour en choisir un</span>
+    <ul class="round" id="round"></ul>
+    <div class="actions">
+      <button type="button" class="raz" id="raz" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+        <span>Tout effacer</span>
+      </button>
+      <!-- Ouvert hors de l'application : la météo est une page de lecture, on
+           n'y reste pas, et le navigateur rend son bouton retour. -->
+      <a class="meteo-l" href="meteo/" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8.6" cy="8.4" r="3.1"/><path d="M8.6 2.6v1.6"/><path d="M3.4 8.4h1.6"/><path d="M4.6 4.4l1.1 1.1"/><path d="M12.6 4.4l-1.1 1.1"/><path d="M7.5 18h9.2a3.3 3.3 0 0 0 .3-6.6 5 5 0 0 0-9.6-1A3.8 3.8 0 0 0 7.5 18z"/></svg>
+        <span>Voir la météo</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="queue" id="queue">
+    <div class="q-l">
+      <span id="q-txt">Aucune photo en attente</span>
+      <span class="q-sub" id="q-sub"></span>
+    </div>
+    <!-- Une seule barre, animée par une transformation CSS : pas de bibliothèque,
+         pas de reflow à chaque photo. -->
+    <i class="q-bar" id="q-bar" hidden><b id="q-jauge"></b></i>
+  </div>
+
+  <p class="note" id="note"></p>
+
+  <!-- Partage : action occasionnelle, donc en pied de page — la zone du pouce
+       reste réservée à la photo. -->
+  <button type="button" class="share-l" id="share">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1"/></svg>
+    <span>Partager l'application</span>
+  </button>
+  <!-- Le code d'accès : saisi une fois, il part avec chaque photo. Le libellé
+       affiche le code en place, pour qu'on sache sans ouvrir. -->
+  <button type="button" class="share-l" id="code-b">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3 19 4"/><path d="m16 7 2 2"/><path d="m19.5 4.5 2 2"/></svg>
+    <span id="code-l">Code d'accès</span>
+  </button>
+  <!-- Version du moteur (version.json, écrit par la diffusion) : pour savoir
+     d'un coup d'œil quelle version tourne sur le téléphone. -->
+<p class="ver" id="ver"></p>
+<input type="file" accept="image/*" capture="environment" id="file" hidden>
+  <input type="file" accept="image/*" id="file-gal" multiple hidden>
+</div>
+
+<!-- La photo réellement en file d'envoi, pas la vignette : c'est elle qui
+     partira en base, et c'est donc elle qu'il faut pouvoir juger. -->
+<div class="loupe" id="loupe" hidden>
+  <button type="button" id="loupe-x" aria-label="Fermer">&times;</button>
+  <img id="loupe-img" alt="">
+  <div class="loupe-t"><strong id="loupe-nm"></strong><span id="loupe-s"></span></div>
+</div>
+
+<!-- Code d'accès : une seule information à retenir, donc une seule feuille,
+     sans réglage ni option. -->
+<div class="sheet" id="code-s" hidden>
+  <div class="sheet-c" role="dialog" aria-modal="true" aria-labelledby="code-t">
+    <h2 id="code-t">Code d'accès</h2>
+    <p class="sheet-h">Le code remis par la mairie. Il accompagne chaque photo&nbsp;: sans lui, le serveur refuse le dépôt.</p>
+    <div class="code-r">
+      <input class="code-i" id="code-i" type="password" inputmode="text" autocapitalize="characters"
+             autocomplete="off" spellcheck="false" placeholder="code d'accès" aria-label="Code d'accès">
+      <button type="button" class="code-v" id="code-v" aria-label="Afficher le code">Afficher</button>
+    </div>
+    <p class="code-m" id="code-m"></p>
+    <div class="sheet-a">
+      <button type="button" class="q-btn prim" id="code-ok">Enregistrer</button>
+      <button type="button" class="q-btn" id="code-x">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Partage : le QR encode l'adresse publique de la commune, pas l'URL
+     GitHub. Il est dessiné au chargement à partir de config.json (qr.js) :
+     il suit l'adresse au lieu d'être un dessin figé à regénérer à la main. -->
+<div class="sheet" id="share-s" hidden>
+  <div class="sheet-c" role="dialog" aria-modal="true" aria-labelledby="share-t">
+    <h2 id="share-t">Partager l'application</h2>
+    <p class="sheet-h">Fais scanner ce code avec l'appareil photo d'un autre téléphone&nbsp;: la tournée s'ouvre directement.</p>
+    <div class="qr">
+      <svg id="qr" role="img" aria-label="QR code vers l'adresse de l'application"></svg>
+    </div>
+    <p class="sheet-u" id="share-u"></p>
+    <div class="sheet-a">
+      <button type="button" class="q-btn prim" id="share-n" hidden>Partager le lien…</button>
+      <button type="button" class="q-btn" id="share-c">Copier le lien</button>
+      <button type="button" class="q-btn" id="share-x">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ──────────────────────────────────────────────────────────────────────────
+   RIEN D'ALBON DANS CE FICHIER.
+
+   Deux sources, toutes deux extérieures au code :
+
+   1. config.json — ce qui identifie la commune : son nom, son adresse
+      publique, le webhook qui reçoit les photos, les seuils de terrain.
+   2. le référentiel des points — il vit dans le classeur de la mairie et
+      arrive ici par le même donnees.json que la page météo. Un point
+      déplacé ou ajouté dans le classeur descend tout seul dans la tournée.
+
+   Les deux sont mis en cache localement : en zone rurale, la tournée doit
+   continuer sans réseau.
+   ────────────────────────────────────────────────────────────────────────── */
+
+const CONF_VIDE = {
+  commune:  { nom: "", departement: "", prefixeCode: "" },
+  adresses: { application: "", meteo: "", referentiel: "meteo/donnees.json" },
+  depot:    { endpoint: null },
+  terrain:  { rayonM: 100, precisionMaxM: 30 },
+};
+let CONF = CONF_VIDE;
+try { const c = JSON.parse(localStorage.getItem("pav-config") || "null");
+      if (c && c.commune) CONF = c; } catch {}
+
+/* Ces trois-là changent quand la configuration arrive : elles ne peuvent pas
+   être des constantes. Elles ne sont lues que dans des fonctions. */
+let ENDPOINT = CONF.depot.endpoint || null;
+let RAYON_M = CONF.terrain.rayonM, PRECISION_MAX_M = CONF.terrain.precisionMaxM;
+let URL_PARTAGE = CONF.adresses.application || location.origin + "/";
+
+/* Le référentiel : vide au départ, rempli par le cache puis par le réseau.
+   Format d'un site : { code, nom, lat, lon, postes: { <flux>: <colonnes> } } */
+let SITES = [];
+const nbColonnes = s => Object.values(s.postes).reduce((a, b) => a + b, 0);
+
+/* Les clés de flux viennent de l'énumération SQL (ordures_menageres…) : on ne
+   les affiche jamais brutes à l'agent. */
+const FLUX_NOM = {
+  verre: "verre", ordures_menageres: "ordures", emballages: "emballages",
+  papier: "papier", carton: "carton", textile: "textile", biodechets: "biodéchets"
+};
+const nomFlux = f => FLUX_NOM[f] || String(f).replace(/_/g, " ");
+
+/* donnees.json donne une ligne par couple îlot × flux ; la tournée raisonne
+   par îlot. On regroupe, sans jamais inventer de colonne absente. */
+function sitesDepuis(d) {
+  if (Array.isArray(d)) return d;                      // vue déjà au bon format
+  const par = new Map();
+  for (const r of (d && d.referentiel) || []) {
+    const code = String(r.site || "");
+    if (!code) continue;
+    let s = par.get(code);
+    if (!s) { s = { code, nom: String(r.nom || code), lat: Number(r.lat), lon: Number(r.lon), postes: {} }; par.set(code, s); }
+    /* nbUnites à 0 dans le classeur veut dire « pas encore compté », pas
+       « pas de conteneur » : le flux existe, on compte au moins une colonne.
+       Sinon l'agent n'aurait aucun moyen de photographier ce flux. */
+    const n = Math.max(1, Math.round(Number(r.nbUnites) || 0));
+    if (r.flux) s.postes[r.flux] = (s.postes[r.flux] || 0) + n;
+  }
+  return [...par.values()].filter(s =>
+    Object.keys(s.postes).length && Number.isFinite(s.lat) && Number.isFinite(s.lon));
+}
+
+/* Cache local du référentiel : la tournée doit marcher sans réseau. */
+try { const c = JSON.parse(localStorage.getItem("pav-referentiel") || "null");
+      if (Array.isArray(c) && c.length) SITES = c; } catch {}
+
+/* Dernier relevé connu par îlot, tiré des observations de donnees.json.
+   null tant qu'aucune observation n'est arrivée : pas d'alerte sur du vide. */
+let DERNIERS = null;
+try { DERNIERS = JSON.parse(localStorage.getItem("pav-derniers") || "null"); } catch {}
+function majDerniers(d) {
+  const obs = d && Array.isArray(d.observations) ? d.observations : null;
+  if (!obs) return;
+  const m = {};
+  for (const o of obs) {
+    if (/^(test|cors)-/.test(String(o.uuid || ""))) continue; // relevés d'essai
+    const c = String(o.site || ""), t = String(o.ts || "");
+    if (c && t && (!m[c] || t > m[c])) m[c] = t;
+  }
+  DERNIERS = m;
+  try { localStorage.setItem("pav-derniers", JSON.stringify(m)); } catch {}
+}
+/* Jours de calendrier depuis le dernier relevé ; null = jamais relevé. */
+function joursSans(code) {
+  const t = DERNIERS && DERNIERS[code]; if (!t) return null;
+  const a = new Date(t), b = new Date();
+  a.setHours(0, 0, 0, 0); b.setHours(0, 0, 0, 0);
+  return Math.max(0, Math.round((b - a) / 86400000));
+}
+/* Points sans photo depuis alerteJours (config.json) ou plus, les plus en
+   retard d'abord. Un point photographié aujourd'hui sur ce téléphone sort
+   de la liste tout de suite, sans attendre l'analyse. */
+function enRetard() {
+  const seuil = (CONF.terrain && CONF.terrain.alerteJours) || 0;
+  if (!seuil || !DERNIERS) return [];
+  const cle = j => j === null ? 1e9 : j;
+  return SITES.map(s => ({ s, j: joursSans(s.code) }))
+    .filter(x => !faits.has(x.s.code) && (x.j === null || x.j >= seuil))
+    .sort((a, b) => cle(b.j) - cle(a.j));
+}
+
+async function chargerReferentiel() {
+  const url = CONF.adresses.referentiel;
+  if (!url) return;
+  try {
+    const r = await fetch(url, { headers: { accept: "application/json" }, cache: "no-cache" });
+    if (!r.ok) return;
+    const d = await r.json();
+    majDerniers(d);
+    const sites = sitesDepuis(d);
+    if (!sites.length) return;                         // jamais effacer sur une réponse vide
+    SITES = sites;
+    try { localStorage.setItem("pav-referentiel", JSON.stringify(sites)); } catch {}
+    // Le mode démo a pu démarrer avant l'arrivée du référentiel.
+    if (demo && !choixManuel && !courant) demarrerDemo("");
+    rendre(); majGps();
+  } catch {}   // hors ligne : on garde le cache, la tournée continue
+}
+
+/* La configuration arrive après le premier rendu : on réapplique ce qui en
+   dépend plutôt que de retarder l'ouverture de la page. */
+function appliquerConfig() {
+  ENDPOINT = (CONF.depot && CONF.depot.endpoint) || null;
+  RAYON_M = (CONF.terrain && CONF.terrain.rayonM) || 100;
+  PRECISION_MAX_M = (CONF.terrain && CONF.terrain.precisionMaxM) || 30;
+  URL_PARTAGE = (CONF.adresses && CONF.adresses.application) || location.origin + "/";
+  // Le service worker lit l'adresse d'envoi ici : une seule source.
+  cfgPut("endpoint", ENDPOINT);
+  const pref = (CONF.commune && CONF.commune.prefixeCode) || "";
+  if (pref) $("code-i").placeholder = pref + "-XXXXXX";
+  $("share-u").textContent = URL_PARTAGE;
+  afficherVersion();
+  /* Logo de la commune : en-tete + favicon. Absent ou introuvable : rien ne s'affiche. */
+  const logo = (CONF.commune && CONF.commune.logo) || "";
+  const img = $("logo");
+  img.onerror = () => { img.hidden = true; };
+  img.hidden = !logo;
+  if (logo) {
+    img.src = logo;
+    img.alt = "Logo " + ((CONF.commune && CONF.commune.nom) || "de la commune");
+    document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach(l => {
+      l.href = logo; l.removeAttribute("sizes"); l.removeAttribute("type");
+    });
+  }
+  majFile(); rendre();
+}
+
+/* Version du moteur, écrite par la diffusion dans version.json. Le service
+   worker la garde en cache : elle s'affiche aussi sans réseau. */
+async function afficherVersion() {
+  try {
+    const r = await fetch("version.json", { cache: "no-cache" });
+    if (!r.ok) return;
+    const v = (await r.json()).version;
+    if (v) $("ver").textContent = "Moteur " + v;
+  } catch {}
+}
+
+async function chargerConfig() {
+  try {
+    const r = await fetch("config.json", { cache: "no-cache" });
+    if (r.ok) {
+      const c = await r.json();
+      if (c && c.commune) {
+        CONF = c;
+        try { localStorage.setItem("pav-config", JSON.stringify(c)); } catch {}
+      }
+    }
+  } catch {}   // hors ligne : la configuration en cache fait l'affaire
+  appliquerConfig();
+}
+
+/* ── géométrie ─────────────────────────────────────────────────────────── */
+const R = 6371000, rad = d => d * Math.PI / 180;
+const distance = (a, b) => {
+  const dLat = rad(b.lat - a.lat), dLon = rad(b.lon - a.lon);
+  const x = Math.sin(dLat/2)**2 + Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLon/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+};
+function identifierSite(pos) {
+  const classes = SITES.map(s => ({ site:s, d: Math.round(distance(pos, s)) }))
+                       .sort((a,b) => a.d - b.d);
+  if (pos.precision_m > PRECISION_MAX_M) return { statut:"precision_insuffisante", candidats: classes.slice(0,3) };
+  const [p1, p2] = classes;
+  if (!p1 || p1.d > RAYON_M)             return { statut:"hors_zone", candidats: classes.slice(0,3) };
+  if (p2 && (p2.d - p1.d) < 2 * pos.precision_m) return { statut:"ambigu", candidats: [p1, p2] };
+  return { statut:"ok", site:p1.site, d:p1.d };
+}
+
+/* ── file hors ligne (IndexedDB, repli en mémoire) ──────────────────────── */
+const DB="pav", ST="file", CFG="config", VG="vignette"; let memoire = [];
+const idb = () => new Promise((ok,ko) => {
+  const r = indexedDB.open(DB,3);
+  r.onupgradeneeded = () => {
+    const d = r.result;
+    if (!d.objectStoreNames.contains(ST))  d.createObjectStore(ST,{keyPath:"uuid"});
+    // Le service worker lit l'URL d'envoi ici : pas de constante dupliquée
+    // entre index.html et sw.js, donc pas de risque de désynchronisation.
+    if (!d.objectStoreNames.contains(CFG)) d.createObjectStore(CFG);
+    /* Les vignettes survivent à l'envoi, contrairement aux photos de la file.
+       C'est ce qui permet de revoir et de corriger un point après coup. */
+    if (!d.objectStoreNames.contains(VG))  d.createObjectStore(VG,{keyPath:"uuid"});
+  };
+  r.onsuccess = () => ok(r.result); r.onerror = () => ko(r.error);
+});
+async function cfgPut(k,v){ try { const d=await idb(); await new Promise((ok,ko)=>{const t=d.transaction(CFG,"readwrite");t.objectStore(CFG).put(v,k);t.oncomplete=ok;t.onerror=()=>ko(t.error);}); } catch {} }
+async function qPut(v){ try { const d=await idb(); await new Promise((ok,ko)=>{const t=d.transaction(ST,"readwrite");t.objectStore(ST).put(v);t.oncomplete=ok;t.onerror=()=>ko(t.error);}); } catch { memoire.push(v); } }
+async function qAll(){ try { const d=await idb(); return await new Promise((ok,ko)=>{const q=d.transaction(ST,"readonly").objectStore(ST).getAll();q.onsuccess=()=>ok(q.result);q.onerror=()=>ko(q.error);}); } catch { return memoire; } }
+async function qDel(k){ try { const d=await idb(); await new Promise((ok,ko)=>{const t=d.transaction(ST,"readwrite");t.objectStore(ST).delete(k);t.oncomplete=ok;t.onerror=()=>ko(t.error);}); } catch { memoire = memoire.filter(x=>x.uuid!==k); } }
+
+async function qVider(){ try { const d=await idb(); await new Promise((ok,ko)=>{const t=d.transaction(ST,"readwrite");t.objectStore(ST).clear();t.oncomplete=ok;t.onerror=()=>ko(t.error);}); } catch {} memoire = []; }
+async function qGet(k){ try { const d=await idb(); return await new Promise((ok,ko)=>{const q=d.transaction(ST,"readonly").objectStore(ST).get(k);q.onsuccess=()=>ok(q.result);q.onerror=()=>ko(q.error);}); } catch { return memoire.find(x=>x.uuid===k); } }
+async function vPut(v){ try { const d=await idb(); await new Promise((ok,ko)=>{const t=d.transaction(VG,"readwrite");t.objectStore(VG).put(v);t.oncomplete=ok;t.onerror=()=>ko(t.error);}); } catch {} }
+async function vAll(){ try { const d=await idb(); return await new Promise((ok,ko)=>{const q=d.transaction(VG,"readonly").objectStore(VG).getAll();q.onsuccess=()=>ok(q.result);q.onerror=()=>ko(q.error);}); } catch { return []; } }
+async function vVider(){ try { const d=await idb(); await new Promise((ok,ko)=>{const t=d.transaction(VG,"readwrite");t.objectStore(VG).clear();t.oncomplete=ok;t.onerror=()=>ko(t.error);}); } catch {} }
+/* On garde la trace du passage, pas l'image : le blob est libéré, le compteur
+   de l'îlot et sa coche survivent. */
+async function marquerEnvoyee(uuid){
+  try {
+    const d = await idb();
+    await new Promise((ok,ko)=>{
+      const t = d.transaction(VG,"readwrite"), s = t.objectStore(VG), q = s.get(uuid);
+      q.onsuccess = () => { const v = q.result; if (v) { v.envoye = true; v.vig = null; s.put(v); } };
+      t.oncomplete = ok; t.onerror = () => ko(t.error);
+    });
+  } catch {}
+}
+async function vDel(k){ try { const d=await idb(); await new Promise((ok,ko)=>{const t=d.transaction(VG,"readwrite");t.objectStore(VG).delete(k);t.oncomplete=ok;t.onerror=()=>ko(t.error);}); } catch {} }
+
+/* ── points relevés aujourd'hui ────────────────────────────────────────── */
+const jour = () => new Date().toISOString().slice(0,10);
+let faits = new Map();   // code du site → nombre de photos prises aujourd'hui
+try { const r = JSON.parse(localStorage.getItem("pav-faits") || "{}"); if (r.d === jour()) faits = new Map(r.c); } catch {}
+const sauverFaits = () => { try { localStorage.setItem("pav-faits", JSON.stringify({ d: jour(), c: [...faits] })); } catch {} };
+
+/* Les vignettes du jour, et une URL d'affichage par vignette. C'est la source
+   de vérité : le compteur des points relevés en est recalculé, de sorte qu'une
+   suppression ne puisse pas laisser un point au vert sans photo derrière. */
+let vignettes = [], urlsVign = new Map();
+
+async function rechargerVignettes() {
+  const tout = await vAll();
+  const aujourdhui = jour();
+  // Les vignettes des jours passés ne servent plus à rien : on fait le ménage.
+  for (const v of tout) if (v.jour !== aujourdhui) vDel(v.uuid);
+  vignettes = tout.filter(v => v.jour === aujourdhui)
+                  .sort((a, b) => a.horodatage.localeCompare(b.horodatage));
+  urlsVign.forEach(u => URL.revokeObjectURL(u));
+  // Une vignette envoyée n'a plus de blob : rien à afficher, rien à libérer.
+  urlsVign = new Map(vignettes.filter(v => v.vig).map(v => [v.uuid, URL.createObjectURL(v.vig)]));
+  faits = new Map();
+  for (const v of vignettes) faits.set(v.site_code, (faits.get(v.site_code) || 0) + 1);
+  sauverFaits();
+}
+
+/* Supprimer une photo, c'est aussi la retirer de la file d'envoi : sans ça,
+   elle partirait quand même au serveur quelques secondes plus tard. */
+async function supprimerPhotos(uuids) {
+  for (const u of uuids) { await qDel(u); await vDel(u); }
+  await rechargerVignettes();
+  rendre();
+}
+
+/* ── état ──────────────────────────────────────────────────────────────── */
+let position = null, courant = null, demo = false, envoiEnCours = false;
+/* Deux compteurs suffisent à la barre de progression : le lot au départ et
+   ce qui est parti. Rien à stocker, rien à restaurer — un envoi interrompu
+   repart de la file, qui est déjà la source de vérité. */
+let envoiTotal = 0, envoiFaites = 0;
+/* Un point choisi à la main l'emporte sur le GPS. Sans ce verrou, chaque
+   nouvelle position émise par watchPosition — c'est-à-dire en continu sur un
+   téléphone — écraserait le choix de l'agent et refermerait le bouton.
+   Il est relâché après la photo, pour que la détection reprenne la main au
+   point suivant de la tournée. */
+let choixManuel = false;
+/* L'îlot que le GPS reconnaît, indépendamment de celui qui est affiché.
+   C'est lui qui sert de verrou : tant qu'il existe, on ne bascule pas sur un
+   autre point sans le demander. */
+let gpsSite = null;
+const $ = id => document.getElementById(id);
+
+/* ── photo ─────────────────────────────────────────────────────────────── */
+/* Chaque photo décodée occupe largeur × hauteur × 4 octets en mémoire vive :
+   une photo de 12 Mpx, c'est 48 Mo. Sans close() ni canvas remis à zéro, une
+   dizaine de photos suffisait à faire tuer l'onglet par le système — c'est
+   l'« appli qui se plante et se ferme ». On libère donc tout, à chaque photo. */
+async function compresser(file, maxCote = 1280, qualite = .7) {
+  let img = null;
+  try { img = await createImageBitmap(file); }
+  catch { return file; }           // format non décodable (HEIC brut) : on garde l'original
+  try {
+    const r = Math.min(1, maxCote / Math.max(img.width, img.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.width * r); c.height = Math.round(img.height * r);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    const b = await new Promise(ok => c.toBlob(ok, "image/jpeg", qualite));
+    c.width = c.height = 0;        // libère le canvas sans attendre le ramasse-miettes
+    return b || file;
+  } catch { return file; }
+  finally { if (img && img.close) img.close(); }
+}
+const positionFraiche = () => new Promise((ok, ko) =>
+  navigator.geolocation.getCurrentPosition(
+    p => ok({ lat:p.coords.latitude, lon:p.coords.longitude, precision_m: Math.round(p.coords.accuracy) }),
+    ko, { enableHighAccuracy:true, maximumAge:0, timeout:10000 }));
+
+/* ── rendu ─────────────────────────────────────────────────────────────── */
+function rendre() {
+  /* Le relevé n'est pas une liste à finir : un agent passe où il passe. Le
+     compteur décrit donc ce qui a été fait, il ne réclame rien. */
+  const n = faits.size, ph = vignettes.length;
+  /* Bandeau d'alerte : les points sans photo depuis trop longtemps. */
+  const retards = enRetard(), codesRetard = new Map(retards.map(x => [x.s.code, x.j]));
+  const libJ = j => j === null ? "jamais" : `${j} j`;
+  $("retard").hidden = !retards.length;
+  if (retards.length) {
+    const seuil = CONF.terrain.alerteJours;
+    $("retard-titre").textContent = retards.length > 1
+      ? `${retards.length} points à relever en priorité` : "1 point à relever en priorité";
+    $("retard-s").textContent = `Sans photo depuis ${seuil} jour${seuil > 1 ? "s" : ""} ou plus. Appuie sur un point pour le choisir.`;
+    $("retard-l").innerHTML = retards.map(x =>
+      `<li><button type="button" data-code="${x.s.code}"><span>${x.s.nom}</span>` +
+      `<span class="j">${x.j === null ? "jamais relevé" : libJ(x.j)} &rsaquo;</span></button></li>`).join("");
+  }
+  $("compte").textContent = n === 0 ? "aucun point relevé"
+    : `${n} point${n > 1 ? "s" : ""} · ${ph} photo${ph > 1 ? "s" : ""}`;
+  $("day").textContent = new Date().toLocaleDateString("fr-FR", { weekday:"long", day:"numeric", month:"long" });
+
+  if (courant) {
+    $("site-nm").textContent = courant.nom;
+    $("site-cd").textContent = courant.code;
+    $("site-flux").innerHTML = Object.entries(courant.postes)
+      .map(([f, n]) => `<span class="chip">${nomFlux(f)}${n > 1 ? ` &times;${n}` : ""}</span>`).join("");
+    $("shoot-lbl").textContent = "Prendre une photo";
+    const multi = Object.entries(courant.postes).filter(([, n]) => n > 1);
+    const tot = nbColonnes(courant);
+    $("hint").textContent = multi.length
+      /* Sur le terrain, tout ne tient pas dans un cadre, et un zoom sur le
+         conteneur à problème masque les autres. Une photo ne parle donc que
+         de ce qu'elle montre : mieux vaut en prendre plusieurs qu'une seule
+         mal cadrée. */
+      ? `${multi.map(([f, n]) => `${n} ${nomFlux(f)}`).join(" et ")} ici. Si tout ne tient pas dans le cadre, prends plusieurs photos.`
+      : `${tot} colonne${tot > 1 ? "s" : ""} ici. Photographie le point même quand tout va bien.`;
+  } else {
+    /* Sans point, le bouton n'est pas un appareil photo : il le dit. Un bouton
+       « Prendre une photo » qui renvoie vers une liste est un mensonge, et
+       l'agent appuie deux fois avant de comprendre. */
+    $("shoot-lbl").textContent = "Choisir un point de collecte";
+    $("hint").textContent = "Aucun point reconnu par le GPS. Choisis-le pour pouvoir photographier.";
+  }
+  /* La bascule des pictogrammes passe par une classe, pas par .hidden :
+     SVGElement n'a pas cette propriété, l'affectation ne posait aucun
+     attribut et l'appareil photo restait affiché sans point. */
+  /* Le désaccord reste sous les yeux : la confirmation est un instant, la
+     tournée dure une heure, et on oublie ce qu'on a accepté. */
+  const enDesaccord = !!(courant && gpsSite && courant.code !== gpsSite.code);
+  $("discord").hidden = !enDesaccord;
+  if (enDesaccord) {
+    $("discord-t").textContent = `Le GPS indique « ${gpsSite.nom} ». Les photos partiront sur « ${courant.nom} ».`;
+    $("discord-b").textContent = `Revenir sur ${gpsSite.nom}`;
+  }
+  $("shoot").classList.toggle("choisir", !courant);
+  /* Le bouton n'est JAMAIS désactivé par le GPS : sans point reconnu il emmène
+     à la liste au lieu de l'appareil photo. Un agent devant une colonne ne doit
+     jamais se retrouver bloqué par un signal capricieux. */
+  $("shoot").disabled = envoiEnCours;
+
+  $("round").innerHTML = SITES.map(s => {
+    const k = faits.get(s.code) || 0;
+    const duSite = vignettes.filter(x => x.site_code === s.code);
+    const attente = duSite.filter(x => !x.envoye).length;
+    const partis  = k - attente;
+    /* Tout envoyé : l'îlot passe à la coche. L'écran se vide de ce qui est
+       parti, mais le passage reste lisible — sinon on repasse deux fois. */
+    const cls = [k ? "done" : "", k && !attente ? "envoye" : "",
+                 courant && s.code === courant.code ? "here" : "", codesRetard.has(s.code) ? "retard-p" : ""].filter(Boolean).join(" ");
+    /* La distance remplace le code tant que le point n'est pas fait : c'est la
+       seule chose utile que l'ancienne liste en double apportait. */
+    const d = position ? Math.round(distance(position, s)) : null;
+    const droite =
+        !k       ? (d !== null ? `${d} m` : s.code)
+      : !attente ? `${k} envoyée${k > 1 ? "s" : ""}`
+      : partis   ? `${attente} en attente · ${partis} envoyée${partis > 1 ? "s" : ""}`
+      : attente > 1 ? `${attente} photos`
+      : (nbColonnes(s) > 1 ? `1 photo · ${nbColonnes(s)} col.` : "1 photo");
+    let bloc = `<li class="${cls}"><button type="button" data-code="${s.code}">` +
+      `<span class="dot"></span><span class="nm">${s.nom}</span>` +
+      (codesRetard.has(s.code) ? `<span class="tag-r">à relever &middot; ${libJ(codesRetard.get(s.code))}</span>` : "") +
+      `<span class="cd">${droite}</span>` +
+      `</button></li>`;
+    /* Les photos du point sélectionné sont dépliées sous sa ligne : pas de
+       second écran à ouvrir, et on voit tout de suite ce qu'on a pris. */
+    if (courant && s.code === courant.code && attente) {
+      // Seules les photos encore sur le téléphone s'affichent : une fois
+      // partie, l'image n'existe plus ici, il n'y a plus rien à montrer.
+      const v = duSite.filter(x => !x.envoye);
+      bloc += `<li class="vgs"><div class="vg-liste">` +
+        v.map(x => {
+          const h = new Date(x.horodatage).toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit" });
+          return `<figure class="vg" data-uuid="${x.uuid}"><img src="${urlsVign.get(x.uuid)}" alt="Photo de ${h}, appuie pour l'agrandir" width="72" height="72" loading="lazy" decoding="async">` +
+            `<figcaption>${h}</figcaption>` +
+            `<button type="button" class="vg-x" data-uuid="${x.uuid}" aria-label="Supprimer la photo de ${h}">&times;</button></figure>`;
+        }).join("") +
+        `</div><button type="button" class="vg-all" data-code="${s.code}">` +
+        (v.length > 1 ? `Supprimer les ${v.length} photos de ce point` : "Supprimer la photo de ce point") +
+        `</button></li>`;
+    }
+    return bloc;
+  }).join("");
+
+  majFile();
+}
+
+function majGps() {
+  if (demo) { $("gps-txt").textContent = "Mode démo — position simulée sur " + (courant ? courant.code : "—"); return; }
+  if (!position) { $("gps-txt").textContent = "GPS en cours d'acquisition"; return; }
+  const r = identifierSite(position);
+  /* « 0 m du point » n'a de sens que si le point affiché est bien celui que le
+     GPS a reconnu. En désaccord, la distance irait au point du GPS et ferait
+     croire qu'on est devant celui de l'écran. */
+  const memePoint = r.statut === "ok" && courant && courant.code === r.site.code;
+  $("gps-txt").textContent = `${position.lat.toFixed(5)}, ${position.lon.toFixed(5)} · ±${position.precision_m} m`
+    + (memePoint ? ` · ${r.d} m du point` : "");
+
+  gpsSite = r.statut === "ok" ? r.site : null;
+
+  // Le choix de l'agent ne se fait pas écraser par la position suivante.
+  if (choixManuel) { rendre(); return; }
+
+  if (r.statut === "ok") { $("state-lbl").textContent = "Point détecté"; courant = r.site; }
+  else if (courant) {
+    /* Le GPS a perdu le point, mais un point est ouvert à l'écran : on le
+       garde. Sans ça, une dérive de quelques mètres transformait le bouton
+       photo en bouton « descends dans la liste », l'agent étant pourtant
+       toujours devant la même colonne. La photo ira sur le point affiché. */
+    $("state-lbl").textContent = "Point affiché — GPS sans confirmation";
+  }
+  else {
+    $("state-lbl").textContent = { ambigu:"Deux points possibles", hors_zone:"Aucun point à proximité", precision_insuffisante:"Signal GPS trop imprécis" }[r.statut];
+    $("site-nm").textContent = r.statut === "ambigu" ? "Lequel ?" : "Choisis le point";
+    $("site-cd").textContent = ""; $("site-flux").innerHTML = "";
+  }
+  rendre();
+}
+
+/* ── capture ───────────────────────────────────────────────────────────── */
+/* Il n'y a qu'une seule liste de points, celle de la tournée, et elle est
+   toujours à l'écran. Le bouton n'ouvre donc plus une seconde liste : quand
+   aucun point n'est reconnu il y emmène, et c'est tout. */
+/* Un appui sur un point du bandeau d'alerte fait exactement ce que fait la
+   ligne de la tournée : on la réutilise, pour ne pas dupliquer la logique. */
+$("retard-l").addEventListener("click", e => {
+  const b = e.target.closest("button[data-code]"); if (!b) return;
+  const l = document.querySelector(`#round li:not(.vgs) > button[data-code="${b.dataset.code}"]`);
+  if (l) { l.click(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+});
+
+$("discord-b").addEventListener("click", () => {
+  if (!gpsSite) return;
+  courant = gpsSite; choixManuel = false;
+  $("state-lbl").textContent = "Point détecté";
+  rendre();
+});
+
+$("shoot").addEventListener("click", () => {
+  if (!courant) { $("round").scrollIntoView({ block: "center", behavior: "smooth" }); return; }
+  $("file").click();
+});
+
+/* La liste de la tournée EST le sélecteur de point : un appui sur une ligne
+   fixe le point courant. Et si un import est en attente, il bascule entier sur
+   ce point — c'est le geste le plus court pour « ces photos-là vont ici ». */
+/* ── la photo en grand ─────────────────────────────────────────────────── */
+/* La vignette fait 200 px : elle dit qu'une photo existe, pas si elle est
+   nette ni si le conteneur tient dans le cadre. On va donc chercher la photo
+   de la file d'envoi — celle qui partira vraiment en base. */
+let urlLoupe = null;
+
+async function ouvrirLoupe(uuid) {
+  const v = vignettes.find(x => x.uuid === uuid); if (!v) return;
+  const item = await qGet(uuid);
+  const blob = item ? item.photo : v.vig;
+  if (urlLoupe) URL.revokeObjectURL(urlLoupe);
+  urlLoupe = URL.createObjectURL(blob);
+  $("loupe-img").src = urlLoupe;
+  const s = SITES.find(y => y.code === v.site_code);
+  const h = new Date(v.horodatage).toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit" });
+  $("loupe-nm").textContent = `${s ? s.nom : v.site_code} · ${h}`;
+  $("loupe-s").textContent = item
+    ? `${Math.round(blob.size / 1024)} Ko · ${ENDPOINT ? "en attente d'envoi" : "conservée sur le téléphone"}`
+    : "photo déjà transmise — il ne reste que la vignette";
+  $("loupe").hidden = false;
+}
+
+function fermerLoupe() {
+  $("loupe").hidden = true;
+  $("loupe-img").removeAttribute("src");
+  if (urlLoupe) { URL.revokeObjectURL(urlLoupe); urlLoupe = null; }
+}
+$("loupe").addEventListener("click", fermerLoupe);
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("loupe").hidden) fermerLoupe(); });
+
+/* Une photo déjà partie au serveur ne revient pas : on le dit, plutôt que de
+   laisser croire que la suppression efface aussi ce qui a été transmis. */
+const AVERTI_ENVOI = () => ENDPOINT ? "\n\nLes photos déjà transmises au serveur ne seront pas retirées de la base." : "";
+
+$("round").addEventListener("click", async e => {
+  const x = e.target.closest(".vg-x");
+  if (x) { await supprimerPhotos([x.dataset.uuid]); return; }
+
+  const vg = e.target.closest("figure.vg");
+  if (vg) { await ouvrirLoupe(vg.dataset.uuid); return; }
+
+  const all = e.target.closest(".vg-all");
+  if (all) {
+    // Seules les photos encore sur le téléphone : une photo envoyée ne se
+    // retire plus d'ici, et sa trace de passage doit survivre.
+    const v = vignettes.filter(y => y.site_code === all.dataset.code && !y.envoye);
+    const s = SITES.find(y => y.code === all.dataset.code);
+    if (!confirm(`Supprimer les ${v.length} photo${v.length > 1 ? "s" : ""} de ${s ? s.nom : all.dataset.code} ?${AVERTI_ENVOI()}`)) return;
+    await supprimerPhotos(v.map(y => y.uuid));
+    return;
+  }
+
+  const b = e.target.closest("button[data-code]"); if (!b) return;
+  const site = SITES.find(s => s.code === b.dataset.code); if (!site) return;
+
+  /* VERROU. Tant que le GPS reconnaît un îlot, en choisir un autre demande une
+     confirmation. Sans elle, une fausse manip dans la liste envoyait les
+     photos suivantes sur le mauvais point — et l'erreur ne se voyait qu'une
+     fois les relevés publiés, trop tard pour la corriger de tête. */
+  if (gpsSite && site.code !== gpsSite.code) {
+    const d = position ? Math.round(distance(position, site)) : null;
+    const ok = confirm(
+      `Le GPS te situe sur « ${gpsSite.nom} ».\n\n`
+      + `Ranger quand même les photos sur « ${site.nom} »`
+      + (d !== null ? `, à ${d} m d'ici` : "") + ` ?`);
+    if (!ok) return;
+  }
+
+  courant = site;
+  choixManuel = true;
+  $("state-lbl").textContent = "Point choisi à la main";
+
+  if (!$("import").hidden && aImporter.length) {
+    aImporter.forEach(x => { x.site = site; x.auto = false; x.defaut = false; x.note = "choisi"; });
+    rendre();
+    await viderPlaces();
+    return;
+  }
+  rendre();
+  $("shoot").scrollIntoView({ block: "center", behavior: "smooth" });
+});
+
+/* La réinitialisation vide tout : les vignettes ET la file d'envoi, y compris
+   ce qui traîne d'un jour précédent resté sans réseau. Sinon on croit avoir
+   effacé, et des photos partent quand même à la prochaine connexion. */
+$("raz").addEventListener("click", async () => {
+  const enFile = (await qAll()).length;
+  const n = vignettes.length;
+  if (!n && !enFile) return;
+  const bouts = [];
+  if (n) bouts.push(`${n} photo${n > 1 ? "s" : ""} sur ${faits.size} point${faits.size > 1 ? "s" : ""}`);
+  if (enFile) bouts.push(`${enFile} en attente d'envoi`);
+  if (!confirm(`Tout effacer : ${bouts.join(", ")} ?${AVERTI_ENVOI()}`)) return;
+
+  await qVider();
+  await vVider();
+  await rechargerVignettes();
+  rendre();
+  $("flash-t").textContent = "Relevé effacé";
+  $("flash-s").textContent = `${Math.max(n, enFile)} photo${Math.max(n, enFile) > 1 ? "s" : ""} supprimée${Math.max(n, enFile) > 1 ? "s" : ""}, file d'envoi vidée`;
+  $("flash").hidden = false;
+});
+
+/* L'import ne dépend pas du point courant : on associe photo par photo. */
+$("galerie").addEventListener("click", () => $("file-gal").click());
+
+async function traiter(e, source) {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = "";
+  if (!file || !courant) return;
+  const site = courant;
+  /* Une photo de 12 Mpx met plusieurs secondes à se compresser : sans retour
+     visible, l'agent croit que rien ne se passe et appuie deux fois. */
+  const occupe = t => { $("busy-txt").textContent = t; $("busy").hidden = false; };
+  $("shoot").disabled = true; $("shoot-lbl").textContent = "Enregistrement…";
+  $("flash").hidden = true;
+  occupe("Compression de la photo…");
+
+  let photo = file, pos = position;
+  try {
+    const tache = Promise.all([
+      compresser(file),
+      demo ? Promise.resolve(position) : positionFraiche().catch(() => position)
+    ]);
+    const minuteur = setTimeout(() => occupe("Lecture de la position GPS…"), 900);
+    const t = await tache;
+    clearTimeout(minuteur);
+    photo = t[0]; pos = t[1] || position;
+  } catch {}
+  occupe("Enregistrement…");
+
+  const item = {
+    uuid: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random())),
+    horodatage: new Date().toISOString(),
+    site_code: site.code,
+    lat: pos ? pos.lat : null, lon: pos ? pos.lon : null,
+    precision_m: pos ? pos.precision_m : null,
+    /* Une photo tirée de la galerie n'a pas été prise ici, maintenant : sa
+       position et son horodatage sont ceux de la SAISIE, pas de la prise de
+       vue. La base doit pouvoir la traiter avec prudence, d'où ce champ. */
+    source,
+    photo
+  };
+  await qPut(item);
+  await vPut({ uuid: item.uuid, site_code: site.code, jour: jour(),
+               horodatage: item.horodatage, vig: await compresser(photo, 200, .55) });
+  await rechargerVignettes();
+  // La photo est prise : le GPS reprend la main pour le point suivant.
+  choixManuel = false;
+
+  /* Pas d'aperçu après la prise de vue : la photo apparaît sous son point,
+     avec son heure, et s'y supprime. Un second exemplaire au-dessus du bouton
+     n'apprenait rien et restait là jusqu'à la photo suivante. */
+  $("busy").hidden = true;
+  $("flash").hidden = true;
+
+  /* Le point qu'on vient de photographier reste affiché : c'est sous sa ligne
+     que la vignette apparaît, et il faut la voir. L'ancien enchaînement
+     automatique vers le point suivant la faisait disparaître aussitôt. */
+  courant = site;
+
+  rendre(); majGps();
+  majFile();   // rien ne part : l’envoi attend un appui sur « Envoyer »
+  $("shoot").disabled = false;
+  remonter();
+}
+
+$("file").addEventListener("change", e => traiter(e, "camera"));
+$("file-gal").addEventListener("change", e => {
+  const fs = Array.from(e.target.files || []); e.target.value = "";
+  importerGalerie(fs);
+});
+
+/* ── lecture EXIF : position et heure de PRISE DE VUE ──────────────────────
+   C'est ce qui rend l'import par lots honnête. Une photo prise à 9h12 devant
+   la colonne à verre porte cette heure et ce point dans ses métadonnées : on
+   les utilise plutôt que l'heure et la position de l'import, qui seraient
+   fausses. Lecteur minimal volontairement — pas de bibliothèque à charger,
+   la page doit rester utilisable hors ligne. */
+async function lireExif(file) {
+  const vide = { lat: null, lon: null, date: null };
+  try {
+    const buf = await file.slice(0, 256 * 1024).arrayBuffer();
+    const v = new DataView(buf);
+    if (v.getUint16(0) !== 0xFFD8) return vide;            // pas un JPEG
+    let o = 2, tiff = -1;
+    while (o + 4 < v.byteLength) {
+      if (v.getUint8(o) !== 0xFF) break;
+      const marq = v.getUint8(o + 1), taille = v.getUint16(o + 2);
+      if (marq === 0xE1 && v.getUint32(o + 4) === 0x45786966) { tiff = o + 10; break; }
+      o += 2 + taille;
+    }
+    if (tiff < 0) return vide;
+    const pe = v.getUint16(tiff) === 0x4949;               // petit-boutiste
+    const u16 = x => v.getUint16(x, pe), u32 = x => v.getUint32(x, pe);
+    const rat = x => u32(x) / (u32(x + 4) || 1);
+
+    const champs = (base) => {
+      const n = u16(base), out = {};
+      for (let i = 0; i < n; i++) {
+        const e = base + 2 + i * 12;
+        out[u16(e)] = { type: u16(e + 2), nb: u32(e + 4), val: e + 8 };
+      }
+      return out;
+    };
+    const texte = (c) => {
+      const d = c.nb > 4 ? tiff + u32(c.val) : c.val;
+      let t = "";
+      for (let i = 0; i < c.nb - 1; i++) t += String.fromCharCode(v.getUint8(d + i));
+      return t;
+    };
+    const degres = (c) => {
+      const d = tiff + u32(c.val);
+      return rat(d) + rat(d + 8) / 60 + rat(d + 16) / 3600;
+    };
+
+    const ifd0 = champs(tiff + u32(tiff + 4));
+    let lat = null, lon = null, date = null;
+
+    if (ifd0[0x8825]) {
+      const g = champs(tiff + u32(ifd0[0x8825].val));
+      if (g[0x0002] && g[0x0004]) {
+        lat = degres(g[0x0002]); lon = degres(g[0x0004]);
+        if (g[0x0001] && texte(g[0x0001]).trim().toUpperCase().startsWith("S")) lat = -lat;
+        if (g[0x0003] && texte(g[0x0003]).trim().toUpperCase().startsWith("W")) lon = -lon;
+      }
+    }
+    const src = ifd0[0x8769] ? champs(tiff + u32(ifd0[0x8769].val)) : {};
+    const brut = (src[0x9003] && texte(src[0x9003])) || (ifd0[0x0132] && texte(ifd0[0x0132]));
+    if (brut) {
+      const m = brut.match(/(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
+      if (m) date = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+    }
+    return { lat, lon, date };
+  } catch { return vide; }
+}
+
+/* ── import par lots ───────────────────────────────────────────────────── */
+let aImporter = [];
+
+const MAX_LOT = 25;                // au-delà, la mémoire du téléphone ne suit plus
+
+async function importerGalerie(files) {
+  if (!files.length) return;
+  let trop = 0;
+  if (files.length > MAX_LOT) { trop = files.length - MAX_LOT; files = files.slice(0, MAX_LOT); }
+
+  aImporter.forEach(x => URL.revokeObjectURL(x.url));
+  aImporter = [];
+  $("busy").hidden = false;
+
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    $("busy-txt").textContent = `Lecture de la photo ${i + 1} / ${files.length}…`;
+    const ex = await lireExif(f);
+    let site = null, d = null, auto = false, defaut = false;
+    if (ex.lat !== null) {
+      const r = identifierSite({ lat: ex.lat, lon: ex.lon, precision_m: 10 });
+      if (r.statut === "ok") { site = r.site; d = r.d; auto = true; }
+    }
+    /* Pas de position dans la photo — et c'est le cas courant, l'iPhone la
+       retire des photos choisies dans la galerie. Le point déjà affiché à
+       l'écran, choisi à la main ou reconnu par le GPS, est alors la meilleure
+       réponse : on la propose, l'agent n'a plus qu'à corriger si besoin. */
+    if (!site && courant) { site = courant; defaut = true; }
+    /* La vignette est une image réduite, pas l'original : afficher dix photos
+       pleine résolution dans la liste suffisait à faire tomber le téléphone. */
+    const vig = await compresser(f, 200, .55);
+    aImporter.push({
+      file: f, exif: ex, site, d, auto, defaut,
+      vig: vig === f ? null : vig,
+      note: auto ? `reconnu à ${d} m`
+          : defaut ? "point en cours"
+          : (ex.lat !== null ? "hors zone, à choisir" : "à choisir"),
+      // vig === f : le format n'a pas pu être décodé, pas de vignette à afficher
+      url: vig === f ? null : URL.createObjectURL(vig),
+      quand: ex.date || new Date(f.lastModified || Date.now())
+    });
+    await new Promise(r => setTimeout(r, 0));   // laisse respirer l'interface
+  }
+  aImporter.sort((a, b) => a.quand - b.quand);
+  $("busy").hidden = true;
+
+  await viderPlaces(trop);
+}
+
+/* Tout ce qui a un point part sans demander : la vignette sous le point EST la
+   confirmation, et elle se supprime d'un appui. Seules les photos qu'on ne
+   sait pas rattacher — ni GPS dans le fichier, ni point à l'écran — restent
+   affichées, et elles partent dès qu'on leur en désigne un. */
+async function viderPlaces(trop = -1) {
+  const prets = aImporter.filter(x => x.site);
+  aImporter = aImporter.filter(x => !x.site);
+  if (aImporter.length) rendreImport(trop);
+  else { $("import").hidden = true; $("imp-list").innerHTML = ""; }
+  if (prets.length) await enregistrerImport(prets);
+}
+
+function rendreImport(trop = 0) {
+  const n = aImporter.length;
+  const place = aImporter.filter(x => x.site).length;
+  /* Ce panneau ne sert plus qu'aux photos qu'on ne sait pas rattacher seul :
+     les autres sont déjà enregistrées quand il s'affiche. */
+  let t = place
+    ? `${place} photo${place > 1 ? "s" : ""} sur ${n} placée${place > 1 ? "s" : ""}, reste ${n - place}`
+    : `${n} photo${n > 1 ? "s" : ""} sans point : ni position dans le fichier, ni point à l'écran`;
+  if (trop > 0) t += ` (${trop} photo${trop > 1 ? "s" : ""} au-delà de ${MAX_LOT} ignorée${trop > 1 ? "s" : ""})`;
+  $("imp-t").textContent = t;
+  $("imp-tout").innerHTML = `<option value="">— choisir un point —</option>` +
+    SITES.map(x => `<option value="${x.code}">${x.nom}</option>`).join("");
+  const opts = s => SITES.map(x =>
+    `<option value="${x.code}"${s && s.code === x.code ? " selected" : ""}>${x.nom}</option>`).join("");
+  $("imp-list").innerHTML = aImporter.map((x, i) => {
+    const h = x.quand.toLocaleString("fr-FR",
+      { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+    const info = `${h} · ${x.note}`;
+    const vign = x.url
+      ? `<img src="${x.url}" alt="" width="54" height="54" loading="lazy" decoding="async">`
+      : `<span class="imp-v" aria-hidden="true">?</span>`;
+    return `<div class="imp-i${x.site ? " auto" : ""}">${vign}` +
+      `<div class="imp-c"><span class="imp-h">${info}</span>` +
+      `<select data-i="${i}"><option value="">— choisir le point —</option>${opts(x.site)}</select>` +
+      `</div></div>`;
+  }).join("");
+  $("import").hidden = false;
+  // On ne remonte la liste qu'à son ouverture : pas à chaque choix de point.
+  if (trop !== -1) $("import").scrollIntoView({ block: "start", behavior: "smooth" });
+}
+
+/* Une rafale prise devant la même colonne porte des heures voisines. Quand
+   l'agent place une photo à la main, les photos sans point prises dans les
+   RAFALE_MIN minutes autour reçoivent le même point : c'est le repli quand
+   l'iPhone a retiré la position GPS des métadonnées, ce qu'il fait presque
+   toujours sur les photos choisies dans la galerie. */
+const RAFALE_MIN = 4;
+
+$("imp-list").addEventListener("change", e => {
+  const sel = e.target.closest("select[data-i]"); if (!sel) return;
+  const i = +sel.dataset.i;
+  const site = SITES.find(x => x.code === sel.value) || null;
+  aImporter[i].site = site;
+  aImporter[i].defaut = false;          // ce point-là est désormais un choix, pas une proposition
+  aImporter[i].note = site ? "choisi" : "à choisir";
+  if (!site) return;
+
+  let propage = 0;
+  const t0 = aImporter[i].quand.getTime();
+  aImporter.forEach((x, j) => {
+    // On ne touche ni aux photos placées par leur GPS, ni à un choix déjà fait.
+    if (j === i || x.auto || (x.site && !x.defaut)) return;
+    if (Math.abs(x.quand.getTime() - t0) <= RAFALE_MIN * 60000) {
+      x.site = site; x.defaut = false; x.note = "même rafale"; propage++;
+    }
+  });
+  // Désigner un point vaut enregistrement : il n'y a plus rien à valider.
+  viderPlaces();
+});
+
+/* Le raccourci qui manquait : importer les photos d'un autre îlot sans devoir
+   d'abord changer le point affiché à l'écran. Un choix explicite ici l'emporte
+   sur tout le reste, y compris sur une reconnaissance GPS. */
+$("imp-tout").addEventListener("change", e => {
+  const site = SITES.find(x => x.code === e.target.value);
+  if (!site) return;
+  aImporter.forEach(x => { x.site = site; x.auto = false; x.defaut = false; x.note = "choisi"; });
+  viderPlaces();
+});
+
+$("imp-no").addEventListener("click", () => {
+  aImporter.forEach(x => URL.revokeObjectURL(x.url));
+  aImporter = []; $("import").hidden = true; $("imp-list").innerHTML = "";
+});
+
+/* Enregistre un lot de photos déjà rattachées à un point. Plus de validation :
+   les vignettes apparaissent sous le point, et une photo mal placée se supprime
+   d'un appui — c'est moins de gestes que de confirmer chaque lot. */
+async function enregistrerImport(lot) {
+  if (!lot.length) return;
+
+  for (let i = 0; i < lot.length; i++) {
+    const x = lot[i];
+    $("busy-txt").textContent = `Enregistrement ${i + 1} / ${lot.length}…`;
+    $("busy").hidden = false;
+    let photo = x.file;
+    try { photo = await compresser(x.file); } catch {}
+    const uuid = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()));
+    const horodatage = x.quand.toISOString();
+    await qPut({
+      uuid, horodatage,
+      site_code: x.site.code,
+      lat: x.exif.lat, lon: x.exif.lon,
+      precision_m: x.exif.lat !== null ? 10 : null,
+      source: x.auto ? "galerie_exif" : "galerie_manuelle",
+      photo
+    });
+    // La vignette a déjà été fabriquée à la lecture du fichier : on la réutilise.
+    await vPut({ uuid, site_code: x.site.code, jour: jour(), horodatage,
+                 vig: x.vig || await compresser(photo, 200, .55) });
+    await new Promise(r => setTimeout(r, 0));   // laisse respirer l'interface
+  }
+  await rechargerVignettes();
+  /* Plus de bandeau de confirmation à l'import : la photo est désormais sous
+     son point, c'est là qu'elle doit être regardée. Un aperçu de plus à côté
+     ne dirait rien que la vignette ne dise déjà, et il faudrait le chasser. */
+  const derniere = lot[lot.length - 1];
+  lot.forEach(x => { if (x.url) URL.revokeObjectURL(x.url); });
+  $("busy").hidden = true;
+  $("flash").hidden = true;
+  /* Le point des dernières photos devient le point courant : ses vignettes
+     s'affichent donc tout de suite sous sa ligne, sans rien chercher. */
+  if (derniere) { courant = derniere.site; choixManuel = true; }
+  rendre(); majFile();
+  remonter();
+}
+
+/* Après chaque enregistrement on revient en tête : c'est là que se trouvent le
+   compteur du relevé et le bouton « Envoyer ». Sans ce retour, on enchaîne les
+   photos sans jamais revoir la file, et on repart avec tout sur le téléphone. */
+function remonter() {
+  try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch { window.scrollTo(0, 0); }
+}
+
+
+
+
+
+/* ── envoi ─────────────────────────────────────────────────────────────── */
+let dernierEtat = "";
+
+async function majFile() {
+  const q = await qAll();
+  const n = q.length;
+  $("q-txt").textContent = n === 0
+    ? "Aucune photo en attente"
+    : `${n} photo${n > 1 ? "s" : ""} en attente d'envoi`;
+  $("q-sub").textContent = !ENDPOINT
+    ? "Aucun serveur configuré — les photos restent sur ce téléphone"
+    : dernierEtat
+      || (envoiArme && n ? (navigator.onLine ? "envoi en cours" : "hors ligne, reprise à la reconnexion") : "")
+      || (n ? "rien ne part tant que tu n'as pas envoyé" : "");
+  $("queue").classList.toggle("actif", envoiEnCours);
+  /* Le bouton d'effacement doit rester accessible même sans vignette : une
+     file héritée d'un jour sans réseau partirait sinon à la reconnexion. */
+  $("raz").hidden = !vignettes.length && !n;
+  /* Le bouton reste visible dès qu'il y a quelque chose à envoyer, même sans
+     serveur : savoir que des photos attendent vaut mieux que de ne rien voir. */
+  const b = $("q-send");
+  b.hidden = n === 0;
+  b.disabled = envoiEnCours || !navigator.onLine || !ENDPOINT;
+  $("q-send-lbl").textContent = envoiEnCours
+    ? `Envoi ${Math.min(envoiFaites + 1, envoiTotal)}/${envoiTotal}…`
+    : `Envoyer ${n} photo${n > 1 ? "s" : ""}`;
+  /* La barre ne vit que pendant l'envoi : hors envoi, le compte de photos en
+     attente dit déjà tout. */
+  const bar = $("q-bar");
+  bar.hidden = !envoiEnCours || !envoiTotal;
+  if (!bar.hidden) $("q-jauge").style.transform = `scaleX(${envoiFaites / envoiTotal})`;
+}
+
+/* L'envoi démarre dès la photo enregistrée, sans attendre la fin de la
+   tournée, et se relance à la reconnexion, au retour sur la page, et toutes
+   les 30 s tant qu'il reste quelque chose. */
+/* Rien ne part tant que l'agent n'a pas appuyé sur « Envoyer ». C'est ce qui
+   donne un sens à la relecture : vignette, loupe et suppression ne servent à
+   vérifier avant de s'engager que si l'engagement vient après. Une fois armé,
+   en revanche, l'envoi se poursuit tout seul — un échec réseau ne doit pas
+   obliger à rester devant le téléphone. */
+/* ── Code d'accès ──────────────────────────────────────────────────────────
+   Un code par personne, délivré par la mairie et révocable depuis le classeur.
+   Il voyage dans le corps de l'envoi, en champ de formulaire plutôt qu'en
+   en-tête : un en-tête personnalisé déclencherait un préflight CORS, et le
+   dépôt multipart s'en passe. Il est recopié dans IndexedDB parce que le
+   service worker, qui vide la file en arrière-plan, n'a pas le localStorage. */
+let CODE = "";
+try { CODE = localStorage.getItem("pav-code") || ""; } catch {}
+function poserCode(v) {
+  CODE = (v || "").trim().toUpperCase();
+  try { localStorage.setItem("pav-code", CODE); } catch {}
+  cfgPut("code", CODE);
+  const l = $("code-l");
+  /* On affiche la fin du code, pas le code : de quoi vérifier d'un coup d'œil
+     que c'est le bon, sans le livrer à qui regarde par-dessus l'épaule — ni à
+     une capture d'écran. */
+  if (l) l.textContent = CODE ? "Code ••••" + CODE.slice(-2) : "Code d'accès";
+}
+function masquerCode(masque) {
+  $("code-i").type = masque ? "password" : "text";
+  $("code-v").textContent = masque ? "Afficher" : "Masquer";
+  $("code-v").setAttribute("aria-label", masque ? "Afficher le code" : "Masquer le code");
+}
+function ouvrirCode(msg) {
+  masquerCode(true);
+  $("code-i").value = CODE;
+  $("code-m").textContent = msg || "";
+  $("code-s").hidden = false;
+  $("code-i").focus();
+}
+
+let envoiArme = false;
+try { envoiArme = localStorage.getItem("pav-arme") === "1"; } catch {}
+const armer = v => { envoiArme = v; try { localStorage.setItem("pav-arme", v ? "1" : "0"); } catch {} };
+
+async function vider() {
+  if (!envoiArme) { majFile(); return; }
+  if (!ENDPOINT || envoiEnCours || !navigator.onLine) { majFile(); return; }
+  if (!CODE) {
+    dernierEtat = "Saisis ton code d'accès avant d'envoyer";
+    armer(false); majFile(); ouvrirCode("Aucun code enregistré sur ce téléphone.");
+    return;
+  }
+  const q = await qAll();
+  if (!q.length) { dernierEtat = ""; majFile(); return; }
+  envoiEnCours = true; dernierEtat = "";
+  envoiTotal = q.length; envoiFaites = 0;
+  majFile();
+  let envoyees = 0;
+  try {
+    for (const it of q) {
+      const fd = new FormData();
+      fd.append("photo", it.photo, it.uuid + ".jpg");
+      for (const k of ["uuid","horodatage","site_code","lat","lon","precision_m"]) fd.append(k, it[k]);
+      fd.append("code", CODE);
+         fd.append("commune", (CONF.commune && CONF.commune.nom) || "");
+      const r = await fetch(ENDPOINT, { method: "POST", body: fd });
+      /* Un code refusé ne se répare pas en réessayant : on désarme, on le dit,
+         et la photo reste en file — elle partira une fois le code corrigé. */
+      if (r.status === 401 || r.status === 403) {
+        dernierEtat = "Code d'accès refusé — vérifie-le auprès de la mairie";
+        armer(false);
+        ouvrirCode("Ce code a été refusé par le serveur.");
+        break;
+      }
+      if (!r.ok) { dernierEtat = `Le serveur a répondu ${r.status} — nouvelle tentative plus tard`; break; }
+      await qDel(it.uuid);
+      /* La photo est partie : sa vignette quitte l'îlot, mais le passage
+         reste inscrit. Sans cette trace, l'agent ne saurait plus où il est
+         déjà allé et photographierait deux fois le même point. */
+      await marquerEnvoyee(it.uuid);
+      envoyees++; envoiFaites = envoyees;
+      majFile();
+    }
+    if (!dernierEtat && envoyees) dernierEtat = `${envoyees} photo${envoyees > 1 ? "s" : ""} envoyée${envoyees > 1 ? "s" : ""}`;
+    if (!(await qAll()).length) armer(false);   // file vide : il faudra réarmer
+  } catch (e) {
+    dernierEtat = "Réseau indisponible — nouvelle tentative plus tard";
+  } finally {
+    envoiEnCours = false; envoiTotal = 0; envoiFaites = 0;
+    await rechargerVignettes();
+    rendre();
+  }
+}
+
+// L'appui arme l'envoi : à partir de là, la file se vide seule si le réseau
+// revient. Tant qu'il n'a pas eu lieu, rien ne quitte le téléphone.
+$("q-send").addEventListener("click", () => { dernierEtat = ""; armer(true); vider(); demanderSync(); });
+window.addEventListener("online", vider);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) vider(); });
+setInterval(() => { qAll().then(q => { if (q.length) vider(); }); }, 30000);
+
+/* Service worker : met la page en cache pour qu'elle s'ouvre sans réseau au
+   point suivant, et surtout reprend l'envoi via Background Sync quand le
+   téléphone est en veille ou la page fermée — sur Android uniquement, iOS
+   n'implémente pas cette API. */
+async function demanderSync() {
+  if (!("serviceWorker" in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    if (reg.sync) await reg.sync.register("envoi-pav");
+  } catch {}
+}
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+  navigator.serviceWorker.addEventListener("message", e => {
+    if (e.data && e.data.type === "pav-envoye") { dernierEtat = "Envoyé en arrière-plan"; majFile(); }
+    if (e.data && e.data.type === "pav-refuse") {
+      dernierEtat = "Code d'accès refusé — vérifie-le auprès de la mairie";
+      armer(false); majFile(); ouvrirCode("Ce code a été refusé par le serveur.");
+    }
+  });
+}
+
+$("code-b").addEventListener("click", () => ouvrirCode());
+$("code-x").addEventListener("click", () => { $("code-s").hidden = true; });
+$("code-v").addEventListener("click", () => masquerCode($("code-i").type !== "password"));
+$("code-ok").addEventListener("click", () => {
+  const v = $("code-i").value.trim();
+  if (!v) { $("code-m").textContent = "Saisis le code remis par la mairie."; return; }
+  poserCode(v);
+  $("code-s").hidden = true;
+  dernierEtat = "Code enregistré"; majFile();
+});
+$("code-i").addEventListener("keydown", e => { if (e.key === "Enter") $("code-ok").click(); });
+
+/* Lien personnel distribué par la mairie : …/?code=XXX-XXXXXX. On le range et
+   on le retire aussitôt de l'adresse, pour qu'il ne reste ni dans l'historique
+   ni dans un lien repartagé depuis le téléphone. */
+(() => {
+  try {
+    const u = new URL(location.href);
+    const c = u.searchParams.get("code");
+    if (c) {
+      poserCode(c);
+      u.searchParams.delete("code");
+      history.replaceState(null, "", u.pathname + u.search + u.hash);
+    }
+  } catch {}
+})();
+poserCode(CODE);
+
+/* ── démarrage ─────────────────────────────────────────────────────────── */
+/* Le mode démo n'existe que pour un appareil SANS géolocalisation utilisable.
+   Il ne doit jamais s'activer après coup : sur un téléphone, watchPosition
+   émet régulièrement des erreurs passagères (timeout, position indisponible),
+   et chacune ferait sauter le point en cours. */
+function demarrerDemo(raison) {
+  if (demo) return;                       // une seule fois
+  demo = true;
+  if (!choixManuel) {
+    courant = SITES.find(s => !faits.has(s.code)) || SITES[0] || null;
+    if (courant) {
+      position = { lat: courant.lat, lon: courant.lon, precision_m: 8 };
+      $("state-lbl").textContent = "Point détecté";
+    }
+  }
+  $("note").innerHTML = `<strong>Mode démo :</strong> ${raison} Choisis un îlot dans la liste pour photographier. Sur un téléphone, avec la géolocalisation autorisée, la page utilise le GPS réel.`;
+  rendre(); majGps();
+}
+
+if (!navigator.geolocation) {
+  demarrerDemo("ce navigateur ne fournit pas de géolocalisation.");
+} else {
+  let premiere = true;
+  const secours = setTimeout(() => {
+    if (premiere) demarrerDemo("la géolocalisation n'a pas répondu.");
+  }, 6000);
+
+  navigator.geolocation.watchPosition(
+    p => {
+      premiere = false; clearTimeout(secours); demo = false;
+      position = { lat: p.coords.latitude, lon: p.coords.longitude,
+                   precision_m: Math.round(p.coords.accuracy) };
+      $("note").textContent = "";
+      majGps();
+    },
+    err => {
+      clearTimeout(secours);
+      // Erreur APRÈS une première position : signal momentanément perdu.
+      // On garde le point en cours et on le dit, sans rien basculer.
+      if (!premiere) {
+        $("gps-txt").textContent = "Signal GPS momentanément indisponible — le point reste celui affiché";
+        return;
+      }
+      premiere = false;
+      demarrerDemo(err && err.code === 1
+        ? "la géolocalisation a été refusée pour ce site."
+        : "la géolocalisation n'est pas disponible ici.");
+    },
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
+  );
+}
+rendre();
+chargerConfig().then(chargerReferentiel);
+// Les photos du jour sont relues au démarrage : rouvrir la page ne perd rien.
+rechargerVignettes().then(rendre).catch(() => {});
+
+/* ──────────────────────────────────────────────────────────────────────────
+   PARTAGE DE L'APPLICATION
+   L'adresse vient de config.json et non de location.href : ouverte depuis
+   l'ancienne URL GitHub, la page doit quand même partager la bonne.
+   ────────────────────────────────────────────────────────────────────────── */
+
+function ouvrirPartage() { $("share-s").hidden = false; }
+function fermerPartage() { $("share-s").hidden = true; $("share-c").textContent = "Copier le lien"; }
+
+$("share").addEventListener("click", ouvrirPartage);
+$("share-x").addEventListener("click", fermerPartage);
+// Un clic sur le fond ferme ; un clic dans la carte ne doit rien faire.
+$("share-s").addEventListener("click", e => { if (e.target === $("share-s")) fermerPartage(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("share-s").hidden) fermerPartage(); });
+
+$("share-c").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(URL_PARTAGE);
+    $("share-c").textContent = "Lien copié";
+  } catch {
+    // Pas de presse-papiers (http, vieux navigateur) : on sélectionne le texte
+    // pour que l'appui long « Copier » du téléphone fonctionne quand même.
+    const r = document.createRange(); r.selectNodeContents($("share-u"));
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    $("share-c").textContent = "Appuie longuement sur le lien";
+  }
+});
+
+// Feuille de partage native : seulement là où elle existe.
+if (navigator.share) {
+  $("share-n").hidden = false;
+  $("share-n").addEventListener("click", () => {
+    const ou = (CONF.commune && CONF.commune.nom) ? " — " + CONF.commune.nom : "";
+    navigator.share({ title: "Tournée PAV" + ou, text: "Relevé des points de collecte" + ou, url: URL_PARTAGE })
+      .catch(() => {});
+  });
+}
+</script>
+
+<script type="module">
+/* Le QR est le seul endroit qui a besoin d'un module : on le charge à part
+   pour ne pas transformer toute la page en module. */
+import { dessiner } from './qr.js';
+const adresse = await fetch('config.json', { cache: 'no-cache' })
+  .then(r => r.ok ? r.json() : null)
+  .then(c => (c && c.adresses && c.adresses.application) || location.origin + '/')
+  .catch(() => location.origin + '/');
+try { dessiner(document.getElementById('qr'), adresse); } catch {}
+</script>
+
+</body>
+</html>

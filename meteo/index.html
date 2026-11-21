@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#E8B000">
+<link rel="icon" href="../favicon.png" sizes="32x32" type="image/png">
+<title>Météo des points de collecte</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout : bandeau de synthèse, grille d'îlots, carte schématique, statistiques, galerie. */
+:root{
+  --bg:#f4f6f5; --surface:#ffffff; --surface-2:#eceeed; --line:#d7dcda;
+  --ink:#16201d; --ink-2:#4a5853; --ink-3:#77837e;
+  --accent:#0d6a66; --accent-soft:#d8ebe9;
+  --good:#2b7a4b; --good-bg:#e2f1e7;
+  --warn:#9a6a07; --warn-bg:#f7eed7;
+  --bad:#b4530d; --bad-bg:#fae7d6;
+  --crit:#ab2318; --crit-bg:#fae0dd;
+  --none:#7b8783; --none-bg:#e7eae9;
+  --sA:#1b7a3e; --sB:#74a524; --sC:#d7a208; --sD:#d96a18; --sE:#bd2a1d; --sOff:#b9c2bf;
+  --c1:#2a78d6; --c2:#eb6834; --c3:#1baf7a; --c4:#8257d9;
+  --font:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#101614; --surface:#182220; --surface-2:#1f2b28; --line:#2d3b37;
+  --ink:#eaf0ee; --ink-2:#b2c0bb; --ink-3:#83918c;
+  --accent:#4fb3ad; --accent-soft:#17312f;
+  --good:#6fcb92; --good-bg:#15291e;
+  --warn:#e3b457; --warn-bg:#2c2415;
+  --bad:#ef9355; --bad-bg:#302014;
+  --crit:#f0756a; --crit-bg:#331a18;
+  --none:#8d9a95; --none-bg:#222c29;
+  --sA:#3fa763; --sB:#8cc23a; --sC:#e8bb34; --sD:#ef8a43; --sE:#e8574a; --sOff:#3a4a46;
+  --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#9b74e8;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#101614; --surface:#182220; --surface-2:#1f2b28; --line:#2d3b37;
+  --ink:#eaf0ee; --ink-2:#b2c0bb; --ink-3:#83918c;
+  --accent:#4fb3ad; --accent-soft:#17312f;
+  --good:#6fcb92; --good-bg:#15291e;
+  --warn:#e3b457; --warn-bg:#2c2415;
+  --bad:#ef9355; --bad-bg:#302014;
+  --crit:#f0756a; --crit-bg:#331a18;
+  --none:#8d9a95; --none-bg:#222c29;
+  --sA:#3fa763; --sB:#8cc23a; --sC:#e8bb34; --sD:#ef8a43; --sE:#e8574a; --sOff:#3a4a46;
+  --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#9b74e8;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);line-height:1.5;margin:0}
+.wrap{max-width:1080px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 56px}
+h1{font-size:clamp(1.5rem,4vw,2rem);font-weight:700;letter-spacing:-.02em;margin:0;text-wrap:balance}
+h2{font-size:1.05rem;font-weight:600;letter-spacing:-.01em;margin:0}
+.eyebrow{font-size:.7rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 6px}
+.sub{color:var(--ink-2);margin:8px 0 0;max-width:62ch}
+header .meta{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:14px;font-size:.82rem;color:var(--ink-3);font-family:var(--mono)}
+section{margin-top:40px}
+.sechead{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.sechead p{margin:0;font-size:.82rem;color:var(--ink-3);max-width:52ch}
+
+.toggle{display:inline-flex;align-items:center;gap:8px;font-size:.8rem;color:var(--ink-2);cursor:pointer;user-select:none}
+.toggle input{accent-color:var(--accent);width:15px;height:15px;cursor:pointer}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.site{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.site-top{display:flex;gap:12px;align-items:flex-start}
+.site-name{font-weight:600;font-size:.98rem;line-height:1.3}
+.site-code{font-family:var(--mono);font-size:.72rem;color:var(--ink-3);letter-spacing:.04em}
+.site-when{font-family:var(--mono);font-size:.72rem;color:var(--ink-3);margin-top:3px}
+.wx{flex:0 0 auto;width:46px;height:46px;border-radius:9px;display:grid;place-items:center}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:.74rem;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.lv0{color:var(--good);background:var(--good-bg)} .lv1{color:var(--warn);background:var(--warn-bg)}
+.lv2{color:var(--bad);background:var(--bad-bg)} .lv3{color:var(--crit);background:var(--crit-bg)}
+.lvx{color:var(--none);background:var(--none-bg)}
+.scorebox{display:flex;align-items:center;gap:12px;background:var(--surface-2);border-radius:9px;padding:10px 12px}
+/* La preuve : la photo du flux qui fixe la note, à côté de la note. Une image
+   qui ne se charge pas s'efface au lieu de laisser un cadre vide. */
+.preuve{margin:0;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--surface-2)}
+.preuve a{display:block;line-height:0}
+.preuve img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
+.preuve figcaption{display:block;padding:7px 10px;font-size:.73rem;color:var(--ink-3);line-height:1.35}
+.preuve figcaption b{color:var(--ink-2);font-weight:600}
+.sansphoto{font-size:.73rem;color:var(--ink-3);border:1px dashed var(--line);border-radius:9px;padding:9px 10px}
+.bac{flex:0 0 auto;display:grid;place-items:center}
+.scoreside{min-width:0;display:flex;flex-direction:column;gap:5px}
+.score{display:flex;align-items:flex-end;gap:2px}
+.score b{width:18px;height:23px;display:grid;place-items:center;font-family:var(--mono);font-weight:600;font-size:.74rem;color:#fff;border-radius:3px;opacity:.34}
+.score b:first-child{border-radius:6px 3px 3px 6px}
+.score b:last-child{border-radius:3px 6px 6px 3px}
+.score b.on{opacity:1;width:25px;height:31px;font-size:.95rem;border-radius:6px}
+.scoretxt{font-size:.76rem;color:var(--ink-2)}
+.scoretxt b{font-weight:600;color:var(--ink)}
+.fscore{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:5px;font-family:var(--mono);font-size:.72rem;font-weight:600;color:#fff;flex:0 0 auto}
+.lanes{display:grid;gap:9px}
+.lane{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;font-size:.8rem}
+.lane .lbl{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lane .cells{display:flex;gap:3px}
+.lane .cells i{flex:1;height:10px;border-radius:2px;background:var(--surface-2)}
+@media (max-width:420px){.lane{grid-template-columns:104px 1fr}}
+.flux{display:flex;flex-direction:column;gap:7px;border-top:1px solid var(--line);padding-top:11px}
+.frow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;min-width:0}
+.fname{display:flex;align-items:center;gap:7px;font-size:.82rem;color:var(--ink-2);min-width:0}
+.fname b{font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;border:1px solid rgba(0,0,0,.18)}
+.fdetail{font-family:var(--mono);font-size:.7rem;color:var(--ink-3);grid-column:1/-1;margin-top:-3px}
+.badge{font-size:.64rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+
+.mapwrap{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+.mapwrap svg{display:block;width:100%;height:auto;max-width:100%}
+.maplegend{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:12px;font-size:.76rem;color:var(--ink-2)}
+.maplegend span{display:inline-flex;align-items:center;gap:6px}
+/* Retour vers le site qui a amené ici. Caché par défaut : il n'apparaît que
+   s'il y a réellement quelque part où revenir. */
+.retour{display:none;align-items:center;gap:8px;margin-bottom:20px;padding:9px 15px;
+  background:var(--surface);border:1px solid var(--line);border-radius:999px;
+  font-size:.85rem;font-weight:600;color:var(--ink-2);text-decoration:none;width:fit-content;max-width:100%}
+.retour[hidden]{display:none}
+.retour:not([hidden]){display:inline-flex}
+.retour:hover{color:var(--ink);background:var(--surface-2)}
+.retour svg{width:15px;height:15px;flex:none}
+.retour span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.swatch{width:11px;height:11px;border-radius:50%;border:1.5px solid var(--surface)}
+
+/* Frise des passages : une bande par îlot, un carré par passage. */
+.frise{display:grid;gap:16px}
+.frow2{display:grid;grid-template-columns:170px 1fr;gap:14px;align-items:start}
+@media (max-width:560px){.frow2{grid-template-columns:1fr;gap:6px}}
+.fr-code{font-family:var(--mono);font-size:.7rem;color:var(--ink-3);letter-spacing:.04em}
+.fr-nom{font-weight:600;font-size:.9rem;line-height:1.3}
+.fr-cells{display:flex;gap:7px;overflow-x:auto;padding-bottom:3px}
+.fr-cell{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:4px;text-decoration:none;color:inherit}
+.fr-sq{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;color:#fff;font-family:var(--mono);font-weight:600;font-size:.92rem;position:relative}
+.fr-sq.depot::after{content:"";position:absolute;right:-2px;top:-2px;width:9px;height:9px;border-radius:50%;background:var(--crit);border:2px solid var(--surface)}
+.fr-dt{font-family:var(--mono);font-size:.63rem;color:var(--ink-3)}
+.fr-cell:hover .fr-sq,.fr-cell:focus-visible .fr-sq{outline:2px solid var(--ink-2);outline-offset:2px}
+.fr-sum{font-size:.74rem;color:var(--ink-3);margin-top:7px}
+button.fr-cell{appearance:none;background:none;border:0;padding:0;font:inherit;cursor:pointer}
+.fr-cell[aria-expanded="true"] .fr-sq{outline:2px solid var(--ink);outline-offset:2px}
+/* Détail d'un passage, déplié sous la bande de l'îlot. */
+.fr-det{margin-top:10px;border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--surface)}
+.fd-t{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-weight:600;font-size:.88rem}
+.fd-l{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;color:#fff;font-family:var(--mono);flex:none}
+.fd-ph{display:flex;gap:10px;overflow-x:auto;margin:12px 0;padding-bottom:3px}
+.fd-ph figure{margin:0;flex:0 0 auto;width:220px}
+.fd-ph img{width:220px;height:165px;object-fit:cover;border-radius:8px;display:block;background:var(--surface-2)}
+.fd-ph figcaption{font-size:.72rem;color:var(--ink-3);margin-top:4px;font-family:var(--mono)}
+.fd-np{width:220px;height:165px;border-radius:8px;display:grid;place-items:center;text-align:center;padding:14px;font-size:.78rem;color:var(--ink-3);background:var(--surface-2)}
+.fd-v{font-size:.8rem;color:var(--ink-3);margin:10px 0}
+.fd-f{list-style:none;margin:0;padding:0;display:grid;gap:9px}
+.fd-f li{font-size:.82rem;line-height:1.45}
+.fd-f b{font-weight:600}
+.fd-tx{display:block;color:var(--ink-3);font-size:.78rem;margin-top:2px}
+/* Mise en route du projet : une jauge globale et une barre par prérequis. */
+.init{display:grid;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
+.in-g{display:flex;align-items:baseline;gap:10px}
+.in-g b{font-size:1.8rem;font-family:var(--mono);font-weight:600}
+.in-g span{color:var(--ink-3);font-size:.85rem}
+.in-r{display:grid;grid-template-columns:1fr minmax(120px,40%) 70px;gap:12px;align-items:center}
+@media (max-width:560px){.in-r{grid-template-columns:1fr 70px}.in-b{grid-column:1/-1;grid-row:2}}
+.in-k{font-size:.85rem}
+.in-k i{color:var(--warn);font-style:normal;font-size:.78rem}
+.in-b{height:10px;background:var(--surface-2);border-radius:5px;overflow:hidden}
+.in-b span{display:block;height:100%;background:var(--accent);border-radius:5px}
+.in-v{font-family:var(--mono);font-size:.82rem;text-align:right;color:var(--ink-2)}
+/* Dépliant « D’où vient la note » en bas de chaque carte. */
+.dvn{margin-top:12px;border-top:1px solid var(--line);padding-top:9px}
+.dvn summary{cursor:pointer;font-size:.82rem;font-weight:600;color:var(--accent)}
+.dvn[open] summary{margin-bottom:9px}
+.dvn-q{font-size:.78rem;color:var(--ink-3);margin:0 0 8px}
+.dvn .c-end{margin-top:6px}
+.fr-vide{font-size:.82rem;color:var(--ink-3);padding:9px 0}
+
+/* D'où vient la note : barres empilées, trois composantes du Bac-Score. */
+.compo{position:relative;display:grid;gap:15px}
+.crow{display:grid;grid-template-columns:170px 1fr;gap:14px;align-items:start}
+@media (max-width:560px){.crow{grid-template-columns:1fr;gap:6px}}
+.c-bar{position:relative;display:flex;height:22px;background:var(--surface-2);border-radius:5px;overflow:hidden}
+.c-seg{height:100%;box-shadow:0 0 0 1px var(--surface) inset}
+.c-seg+.c-seg{margin-left:2px}
+.c-seg:last-of-type{border-radius:0 4px 4px 0}
+.c-seg:first-of-type{border-radius:4px 0 0 4px}
+.c-end{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 7px;margin-top:6px;font-size:.76rem;color:var(--ink-3)}
+.c-end b{font-family:var(--mono);color:var(--ink);font-weight:600}
+.c-vals{font-size:.74rem;color:var(--ink-2)}
+.c-vals i{font-style:normal;white-space:nowrap}
+.c-vals i+i::before{content:" · ";color:var(--ink-3)}
+.c-key{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:baseline}
+.c-flux{font-size:.74rem;color:var(--ink-3)}
+.c-legend{display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:16px;padding-top:13px;border-top:1px solid var(--line);font-size:.78rem;color:var(--ink-2)}
+.c-legend span{display:inline-flex;align-items:center;gap:7px}
+.c-axe{display:grid;grid-template-columns:170px 1fr;gap:14px;margin-top:4px}
+@media (max-width:560px){.c-axe{grid-template-columns:1fr}}
+.c-axe-t{position:relative;height:17px;overflow:hidden;font-family:var(--mono);font-size:.64rem;color:var(--ink-3)}
+.c-tick{position:absolute;top:0;transform:translateX(-50%)}
+@media (max-width:560px){.c-tick:first-child{display:none}}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.tile .k{font-size:.72rem;color:var(--ink-3);letter-spacing:.03em}
+.tile .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:1.7rem;font-weight:600;line-height:1.1;margin-top:5px}
+.tile .n{font-size:.74rem;color:var(--ink-2);margin-top:5px}
+.tile.alert{border-color:var(--crit);background:var(--crit-bg)}
+.tile.alert .v,.tile.alert .k,.tile.alert .n{color:var(--crit)}
+
+.bars{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:12px}
+.bar{display:grid;grid-template-columns:132px 1fr 42px;gap:10px;align-items:center;margin-top:9px;font-size:.8rem}
+.bar:first-of-type{margin-top:0}
+.bar .track{background:var(--surface-2);border-radius:3px;height:12px;overflow:hidden}
+.bar .fill{display:block;height:100%;border-radius:3px 4px 4px 3px;background:var(--accent)}
+.bar .num{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;color:var(--ink-2)}
+.bar .lab{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+a:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+
+.note{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:14px 16px;margin-top:14px}
+.note h3{margin:0 0 6px;font-size:.86rem;font-weight:600}
+.note p,.note li{font-size:.81rem;color:var(--ink-2);margin:5px 0}
+.note ul{margin:6px 0 0;padding-left:18px}
+footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);font-size:.76rem;color:var(--ink-3)}
+footer p{margin:5px 0}
+details summary{cursor:pointer;font-size:.82rem;color:var(--ink-2);font-weight:500}
+details[open] summary{margin-bottom:8px}
+@media (max-width:420px){.bar{grid-template-columns:96px 1fr 36px}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<a class="retour" id="retour" hidden></a>
+<header>
+  <p class="eyebrow">Pack mairies · module points de collecte</p>
+  <h1>Météo des points de collecte</h1>
+  <p class="sub">Chaque îlot d'apport volontaire porte deux indications. Le <b>Bac-Score</b>, de A à E, note la situation durable du point sur trente jours. La <b>météo</b>, à côté, donne l'état constaté au dernier passage. Un point peut être beau aujourd'hui et noté D parce qu'il déborde toutes les semaines.</p>
+  <div class="meta">
+    <span id="m-commune"></span>
+    <span id="m-maj"></span>
+    <span id="m-nb"></span>
+  </div>
+  <div style="margin-top:14px">
+    <!-- Case « relevés de test » retirée : la page publique les exclut toujours. -->
+  </div>
+</header>
+
+<section>
+  <div class="sechead">
+    <h2>État des îlots</h2>
+    <p>Cliquez le détail d'un îlot pour voir le raisonnement flux par flux.</p>
+  </div>
+  <div class="grid" id="sites"></div>
+</section>
+
+<section>
+  <div class="sechead">
+    <h2>Carte des îlots</h2>
+    <p>Positions réelles, à l'échelle, d'après les coordonnées du référentiel.</p>
+  </div>
+  <div class="mapwrap">
+    <svg id="map" viewBox="0 0 800 520" role="img" aria-label="Carte schématique des six îlots de collecte de la commune"></svg>
+    <div class="maplegend" id="maplegend"></div>
+  </div>
+</section>
+
+<section>
+  <div class="sechead">
+    <h2>Frise des passages</h2>
+    <p>Un carré par passage, du plus ancien au plus récent, coloré par le Bac-Score calculé ce jour-là. Le point rouge signale un dépôt au sol. Cliquez un carré pour voir les photos du passage et ce qui a été constaté flux par flux.</p>
+  </div>
+  <div class="mapwrap">
+    <div class="frise" id="frise"></div>
+    <p style="margin:16px 0 0;font-size:.78rem;color:var(--ink-3);max-width:66ch">Deux îlots côte à côte peuvent afficher la même note aujourd'hui : c'est la frise qui dit lequel est un accident et lequel recommence à chaque passage.</p>
+  </div>
+</section>
+
+<!-- Section remplacée par le dépliant « D’où vient la note » de chaque carte.
+     Gardée masquée : le script y écrit encore l'axe et la légende. -->
+<section style="display:none">
+  <div class="sechead">
+    <h2>D'où vient la note</h2>
+    <p id="compo-intro">Les points de pénalité du flux qui fixe la note, répartis entre les trois critères.</p>
+  </div>
+  <div class="mapwrap">
+    <div class="compo" id="compo"></div>
+    <div class="c-axe"><span></span><div class="c-axe-t" id="compo-axe"></div></div>
+    <div class="c-legend" id="compo-legend"></div>
+    <p style="margin:16px 0 0;font-size:.78rem;color:var(--ink-3);max-width:66ch">Deux points notés C ne demandent pas la même réponse. Des pénalités de propreté désignent une incivilité, donc de la sensibilisation ou un retrait plus fréquent ; des pénalités de remplissage désignent un dispositif trop petit, donc une demande au syndicat de collecte.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sechead">
+    <h2>Statistiques d'exploitation</h2>
+    <p>Ce que disent les passages sur la période couverte par les relevés.</p>
+  </div>
+  <div class="tiles" id="tiles"></div>
+  <div class="bars" id="bars"></div>
+</section>
+
+<!-- Mise en route : se masque d'elle-même quand tout est à 100 %. -->
+<section>
+  <div class="sechead">
+    <h2>Mise en route du projet</h2>
+    <p>Ce qui reste à compléter pour que toutes les notes soient calculées entièrement. Cette rubrique disparaît une fois à 100 %.</p>
+  </div>
+  <div class="init" id="init"></div>
+</section>
+
+
+<section>
+  <div class="sechead">
+    <h2>Comment se calcule le Bac-Score</h2>
+    <p>Une note de A à E par flux ; l'îlot retient la moins bonne.</p>
+  </div>
+  <div class="mapwrap">
+    <p id="bareme-intro" style="margin:0 0 14px;font-size:.84rem;color:var(--ink-2);max-width:66ch">Le score additionne des <b>points de pénalité</b> et convertit le total en lettre.</p>
+    <div class="lanes" id="bareme"></div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:18px;padding-top:14px;border-top:1px solid var(--line)" id="echelle"></div>
+    <p id="bareme-recidive" style="margin:14px 0 0;font-size:.78rem;color:var(--ink-3);max-width:66ch">La récidive est ce qui distingue un incident d'un problème de fond.</p>
+  </div>
+</section>
+
+<footer>
+  <p id="m-source">Page calculée à partir des données brutes, sans saisie manuelle.</p>
+  <p>La photo d'un îlot n'est pas publiée lorsque le relevé signale une personne ou une plaque d'immatriculation reconnaissable : le constat compte dans la note, l'image reste privée.</p>
+</footer>
+</div>
+
+<script type="module">
+/* La page ne contient plus de données : elle charge donnees.json, publié
+   depuis le classeur, et importe le calcul du Bac-Score. Une seule
+   implémentation du barème, partagée avec la vignette. */
+import {LETTRES, FLUX_LABEL, dateFR, jours, normaliser, appliquerBareme, decrireBareme,
+        calcule as calculeAvec, passagesParSite as passagesAvec} from './bac-score.js';
+import {chargerConfig, chargerBareme, urlPhoto, urlVignette, libelleCommune} from './config.js';
+
+let REF=[], OBS=[];
+const calcule=obs=>calculeAvec(REF,obs);
+const passagesParSite=obs=>passagesAvec(REF,obs);
+
+
+const FLUX_DOT={verre:"#2f7d4e",ordures_menageres:"#5d6a66",emballages:"#d8a81a",papier:"#2f6ea8"};
+const NIV=[
+ {cls:"lv0",lab:"Propre",wx:"soleil"},
+ {cls:"lv1",lab:"À surveiller",wx:"eclaircies"},
+ {cls:"lv2",lab:"Dégradé",wx:"pluie"},
+ {cls:"lv3",lab:"Critique",wx:"orage"}
+];
+const INCONNU={cls:"lvx",lab:"Sans relevé",wx:"inconnu"};
+const NONVU={cls:"lvx",lab:"Non repéré",wx:"inconnu"};
+let bacSeq=0;
+function bacIcon(frac,col,size){
+  const s=size||44,id="bk"+(++bacSeq),y=(21.6-13.6*frac).toFixed(2),h=(13.6*frac).toFixed(2);
+  const corps="M6.1 8.2h11.8l-.95 12.1a1.9 1.9 0 0 1-1.9 1.75H8.95a1.9 1.9 0 0 1-1.9-1.75z";
+  return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" aria-hidden="true" style="color:var(--ink-2)">'
+   +'<defs><clipPath id="'+id+'"><path d="'+corps+'"/></clipPath></defs>'
+   +'<rect x="5" y="'+y+'" width="14" height="'+h+'" fill="'+col+'" clip-path="url(#'+id+')"/>'
+   +'<path d="'+corps+'" fill="none" stroke="currentColor" stroke-width="1.5"/>'
+   +'<path d="M4.2 7.5h15.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>'
+   +'<path d="M9.7 7.5V5.8a1.2 1.2 0 0 1 1.2-1.2h2.2a1.2 1.2 0 0 1 1.2 1.2v1.7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>'
+   +'</svg>';
+}
+function scoreStrip(L){
+  return '<div class="score" role="img" aria-label="Bac-Score '+(L?L.l:'non noté')+'">'
+   + LETTRES.map(x=>'<b class="'+(L&&x.l===L.l?'on':'')+'" style="background:var('+x.var+')">'+x.l+'</b>').join('')
+   +'</div>';
+}
+const MAPCOL=["#2b7a4b","#9a6a07","#b4530d","#ab2318"];
+
+function icon(kind,size){
+  const s=size||26, c='stroke="currentColor" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"';
+  const sun='<circle cx="12" cy="12" r="4.2" '+c+'/><g '+c+'><path d="M12 3.4v2"/><path d="M12 18.6v2"/><path d="M3.4 12h2"/><path d="M18.6 12h2"/><path d="M6 6l1.4 1.4"/><path d="M16.6 16.6L18 18"/><path d="M18 6l-1.4 1.4"/><path d="M7.4 16.6L6 18"/></g>';
+  const cloud='<path d="M7.5 18h9.2a3.3 3.3 0 0 0 .3-6.6 5 5 0 0 0-9.6-1A3.8 3.8 0 0 0 7.5 18z" '+c+'/>';
+  const map={
+    soleil:sun,
+    eclaircies:'<circle cx="8.6" cy="8.4" r="3.1" '+c+'/><g '+c+'><path d="M8.6 2.6v1.6"/><path d="M3.4 8.4h1.6"/><path d="M4.6 4.4l1.1 1.1"/><path d="M12.6 4.4l-1.1 1.1"/></g>'+cloud,
+    pluie:cloud+'<g '+c+'><path d="M9.5 20v1.6"/><path d="M13 20v1.6"/><path d="M16.5 20v1.6"/></g>',
+    orage:cloud+'<path d="M13.4 19.4l-3 .1 2.3 3.1" '+c+'/><g '+c+'><path d="M9 20.2v1.4"/><path d="M16.6 20v1.6"/></g>',
+    inconnu:'<circle cx="12" cy="12" r="8.4" '+c+'/><path d="M9.6 9.6a2.5 2.5 0 1 1 3.1 2.4c-.5.2-.7.6-.7 1.1v.6" '+c+'/><path d="M12 17.1v.1" '+c+'/>'
+  };
+  return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" aria-hidden="true">'+map[kind]+'</svg>';
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+
+function rendu(){
+  const inclureTest=false; // la page est publique : les relevés de test n'y figurent jamais
+  const obs=OBS.filter(o=>inclureTest||!o.test);
+  /* Du plus récemment relevé au plus ancien : une page de suivi se lit par le
+     haut, et ce qu'on vient de constater vaut mieux que l'ordre alphabétique
+     des codes. Les îlots jamais relevés ferment la marche — ils ne sont pas
+     une actualité, mais ils ne doivent pas disparaître pour autant. */
+  const parFraicheur=(a,b)=>{
+    if(a.dernier&&b.dernier) return b.dernier.localeCompare(a.dernier);
+    if(a.dernier) return -1;
+    if(b.dernier) return 1;
+    return a.site.localeCompare(b.site);
+  };
+  const sites=calcule(obs).sort(parFraicheur);
+  /* La frise et la décomposition suivent le même ordre : trois sections qui
+     classent différemment les mêmes îlots se lisent mal. */
+  const ordre=new Map(sites.map((s,i)=>[s.site,i]));
+  const commeLesCartes=l=>l.slice().sort((a,b)=>(ordre.get(a.site)??99)-(ordre.get(b.site)??99));
+
+  const maj=obs.map(o=>o.ts).sort().pop();
+  document.getElementById('m-maj').textContent = maj? "Dernier relevé : "+dateFR(maj) : "Aucun relevé";
+  const photos=[...new Set(obs.map(o=>o.photo))];
+  document.getElementById('m-nb').textContent = photos.length+" photos · "+obs.length+" constats";
+
+  /* La photo qui justifie la note : celle du flux le plus dégradé du dernier
+     passage. Rien si elle porte une personne ou une plaque lisible — le relevé
+     compte dans la note, c'est l'image qui ne se publie pas. */
+  function preuve(s){
+    const avecPhoto=s.flux.filter(f=>f.photo);
+    if(!avecPhoto.length) return '';
+    const f=avecPhoto.slice().sort((a,b)=>((b.sc?b.sc.total:-1)-(a.sc?a.sc.total:-1)))[0];
+    if(!f.publiable) return '<div class="sansphoto">Photo non publiée : une personne ou une plaque y est reconnaissable.</div>';
+    const n=new Set(s.flux.filter(x=>x.photo).map(x=>x.photo)).size;
+    return '<figure class="preuve">'
+      +'<a href="'+urlPhoto(f.photo)+'" target="_blank" rel="noopener" '
+      +'title="'+esc((FLUX_LABEL[f.flux]||f.flux)+' — '+(f.ts?dateFR(f.ts):''))+'">'
+      +'<img src="'+urlVignette(f.photo,600)+'" loading="lazy" '
+      +'alt="'+esc('Relevé photo de l\'îlot '+s.nom)+'" onerror="this.closest(\'figure\').remove()"></a>'
+      +'<figcaption><b>'+esc(FLUX_LABEL[f.flux]||f.flux)+'</b>'+(f.ts?' · '+esc(dateFR(f.ts)):'')
+      +(n>1?' · '+n+' photos ce jour-là':'')+'</figcaption></figure>';
+  }
+
+  // Îlots
+  document.getElementById('sites').innerHTML = sites.map(s=>{
+    const niv = s.niveau===null?INCONNU:NIV[s.niveau];
+    const vieux = s.dernier && jours(s.dernier)>7;
+    return '<article class="site">'
+      +'<div class="site-top">'
+        +'<div class="wx '+niv.cls+'">'+icon(niv.wx,26)+'</div>'
+        +'<div style="min-width:0;flex:1">'
+          +'<div class="site-code">'+esc(s.site)+'</div>'
+          +'<div class="site-name">'+esc(s.nom)+'</div>'
+          +'<div class="site-when">'+(s.dernier? "relevé "+dateFR(s.dernier)+(vieux?" · périmé":"") : "jamais relevé")+'</div>'
+        +'</div>'
+        +'<span class="pill '+niv.cls+'">'+niv.lab+'</span>'
+      +'</div>'
+      +'<div class="scorebox">'
+        +'<span class="bac">'+bacIcon(s.L?s.L.fill:0,s.L?'var('+s.L.var+')':'var(--sOff)',44)+'</span>'
+        +'<span class="scoreside">'+scoreStrip(s.L)
+          +'<span class="scoretxt">'+(s.L?'<b>'+esc(s.L.lab)+'</b> · '+s.pts+' point'+(s.pts>1?'s':'')+' de pénalité':'<b>Non noté</b> · aucun relevé exploitable')+'</span>'
+        +'</span>'
+      +'</div>'
+      +preuve(s)
+      +'<div class="flux">'+s.flux.map(f=>{
+        const fn = f.niveau===null?(f.nonVisible?NONVU:INCONNU):NIV[f.niveau];
+        return '<div class="frow">'
+          +'<span class="fname"><span class="dot" style="background:'+(FLUX_DOT[f.flux]||'#999')+'"></span><b>'+esc(FLUX_LABEL[f.flux]||f.flux)+'</b>'
+          +(f.horsRef?' <span class="badge">hors référentiel</span>':'')
+          +(f.test?' <span class="badge">test</span>':'')+'</span>'
+          +'<span style="display:inline-flex;align-items:center;gap:6px">'
+            +(f.sc?'<span class="fscore" style="background:var('+f.sc.L.var+')" title="Bac-Score '+f.sc.L.l+' · '+f.sc.total+' points">'+f.sc.L.l+'</span>':'')
+            +'<span class="pill '+fn.cls+'">'+fn.lab+'</span></span>'
+          +'<span class="fdetail">'+esc(f.detail)+'</span>'
+        +'</div>';
+      }).join('')+'</div>'
+    +dOuVient(s)
+      +'</article>';
+  }).join('');
+
+  // Carte
+  const lats=sites.map(s=>s.lat), lons=sites.map(s=>s.lon);
+  const latMin=Math.min(...lats), latMax=Math.max(...lats), lonMin=Math.min(...lons), lonMax=Math.max(...lons);
+  const latMoy=(latMin+latMax)/2, kx=Math.cos(latMoy*Math.PI/180);
+  const W=800,H=520,PAD=78;
+  const spanX=(lonMax-lonMin)*kx||1e-6, spanY=(latMax-latMin)||1e-6;
+  const sc=Math.min((W-2*PAD)/spanX,(H-2*PAD)/spanY);
+  const offX=(W-spanX*sc)/2, offY=(H-spanY*sc)/2;
+  const px=s=>offX+(s.lon-lonMin)*kx*sc, py=s=>offY+(latMax-s.lat)*sc;
+  const kmParDegLat=111.2, pxParKm=sc/kmParDegLat;
+  let g='<rect x="0" y="0" width="800" height="520" fill="var(--surface-2)" rx="8"/>';
+  for(let i=1;i<8;i++){const x=i*100;g+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="520" stroke="var(--line)" stroke-width="1"/>';}
+  for(let i=1;i<6;i++){const y=i*87;g+='<line x1="0" y1="'+y+'" x2="800" y2="'+y+'" stroke="var(--line)" stroke-width="1"/>';}
+  sites.forEach(s=>{
+    const x=px(s), y=py(s);
+    const col=s.L?'var('+s.L.var+')':'var(--sOff)';
+    const haut=y<110;
+    g+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="23" fill="'+col+'" stroke="var(--surface)" stroke-width="3.5"/>';
+    g+='<text x="'+x.toFixed(1)+'" y="'+(y+8).toFixed(1)+'" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="22" font-weight="600" fill="#fff">'+(s.L?s.L.l:'?')+'</text>';
+    g+='<text x="'+x.toFixed(1)+'" y="'+(haut?y+62:y-50).toFixed(1)+'" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink-3)">'+esc(s.site)+'</text>';
+    g+='<text x="'+x.toFixed(1)+'" y="'+(haut?y+46:y-32).toFixed(1)+'" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="500" fill="var(--ink)">'+esc(s.nom.replace(/^Îlot /,''))+'</text>';
+  });
+  const barre=pxParKm;
+  g+='<g><line x1="52" y1="478" x2="'+(52+barre).toFixed(1)+'" y2="478" stroke="var(--ink-2)" stroke-width="2.5"/>'
+   +'<line x1="52" y1="472" x2="52" y2="484" stroke="var(--ink-2)" stroke-width="2.5"/>'
+   +'<line x1="'+(52+barre).toFixed(1)+'" y1="472" x2="'+(52+barre).toFixed(1)+'" y2="484" stroke="var(--ink-2)" stroke-width="2.5"/>'
+   +'<text x="'+(52+barre/2).toFixed(1)+'" y="498" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--ink-2)">1 km</text></g>';
+  g+='<text x="748" y="486" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="var(--ink-3)">N</text>'
+   +'<path d="M748 476 L744 466 L748 469 L752 466 Z" fill="var(--ink-2)"/>';
+  document.getElementById('map').innerHTML=g;
+  document.getElementById('maplegend').innerHTML =
+    LETTRES.map(x=>'<span><i class="swatch" style="background:var('+x.var+')"></i><b style="font-family:var(--mono)">'+x.l+'</b> '+x.lab+'</span>').join('')
+    +'<span><i class="swatch" style="background:var(--sOff)"></i><b style="font-family:var(--mono)">?</b> Non noté</span>';
+
+  // Frise des passages
+  const MAXP=10;
+  /* Un carré = un passage. Le clic déplie sous la bande les photos du passage
+     et ce que le classifieur a constaté flux par flux : de quoi comprendre
+     pourquoi l'îlot avait telle note ce jour-là. Une photo où une personne ou
+     une plaque est reconnaissable n'est ni affichée ni liée. */
+  const FRISE={};
+  document.getElementById('frise').onclick=e=>{
+    const b=e.target.closest('button.fr-cell'); if(!b) return;
+    const row=b.closest('.frow2'), det=row.querySelector('.fr-det');
+    const deja=b.getAttribute('aria-expanded')==='true';
+    row.querySelectorAll('button.fr-cell').forEach(x=>x.setAttribute('aria-expanded','false'));
+    if(deja){ det.hidden=true; det.innerHTML=''; return; }
+    const l=(FRISE[b.dataset.site]||[])[+b.dataset.i]; if(!l) return;
+    b.setAttribute('aria-expanded','true');
+    det.innerHTML=detailPassage(l); det.hidden=false;
+  };
+  function detailPassage(l){
+    const col=l.L?'var('+l.L.var+')':'var(--sOff)';
+    const ids=[...new Set(l.obs.map(o=>o.photo).filter(Boolean))];
+    const photos=ids.map(id=>{
+      const rows=l.obs.filter(o=>o.photo===id);
+      const h=new Date(rows[0].ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+      const leg=esc(h+' · '+[...new Set(rows.map(o=>FLUX_LABEL[o.flux]||o.flux))].join(', '));
+      if(rows.some(o=>o.personneVisible||o.plaqueLisible))
+        return '<figure><div class="fd-np">Photo non publiée : une personne ou une plaque y est reconnaissable.</div><figcaption>'+leg+'</figcaption></figure>';
+      return '<figure><a href="'+urlPhoto(id)+'" target="_blank" rel="noopener"><img src="'+urlVignette(id,600)+'" loading="lazy" alt="'+esc('Photo de '+h)+'"></a><figcaption>'+leg+'</figcaption></figure>';
+    }).join('');
+    const parFlux={};
+    l.obs.forEach(o=>{ const p=parFlux[o.flux]; if(!p||new Date(o.ts)>new Date(p.ts)) parFlux[o.flux]=o; });
+    const constats=Object.values(parFlux).map(o=>{
+      const bouts=[];
+      if(o.inaccessible) bouts.push('inaccessible');
+      else if(o.vues===0) bouts.push('conteneur non repéré sur la photo');
+      else {
+        bouts.push(o.vues+' conteneur'+(o.vues>1?'s':'')+' vu'+(o.vues>1?'s':''));
+        if(o.pleines) bouts.push(o.pleines+' plein'+(o.pleines>1?'s':''));
+        if(o.bloquees) bouts.push(o.bloquees+' bloqué'+(o.bloquees>1?'s':''));
+        if(o.dessus) bouts.push(o.dessus+' avec un dépôt dessus');
+      }
+      if(o.depotSol) bouts.push('dépôt au sol'+(o.sacs?' ('+o.sacs+' sac'+(o.sacs>1?'s':'')+')':''));
+      return '<li><b>'+esc(FLUX_LABEL[o.flux]||o.flux)+'</b> — '+esc(bouts.join(' · '))
+        +(o.texte?'<span class="fd-tx">'+esc(o.texte)+'</span>':'')+'</li>';
+    }).join('');
+    const titre=(l.L?'Bac-Score '+l.L.l+' — '+l.L.lab+' · '+l.pts+' point'+(l.pts>1?'s':''):'Non noté')+' · '+dateFR(l.fin);
+    return '<div class="fd-t"><span class="fd-l" style="background:'+col+'">'+(l.L?l.L.l:'?')+'</span><span>'+esc(titre)+'</span></div>'
+      +(photos?'<div class="fd-ph">'+photos+'</div>':'<p class="fd-v">Pas de photo pour ce passage.</p>')
+      +'<ul class="fd-f">'+constats+'</ul>';
+  }
+  document.getElementById('frise').innerHTML = commeLesCartes(passagesParSite(obs)).map(s=>{
+    const lots=s.lots.slice(-MAXP);
+    FRISE[s.site]=lots;
+    const cells=lots.map((l,i)=>{
+      const col=l.L?'var('+l.L.var+')':'var(--sOff)';
+      const jj=new Date(l.fin).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
+      const titre=(l.L?'Bac-Score '+l.L.l+' — '+l.L.lab+' · '+l.pts+' point'+(l.pts>1?'s':'')
+                     :'Non noté')+' · '+dateFR(l.fin)+(l.depot?' · dépôt au sol':'');
+      const inner='<span class="fr-sq'+(l.depot?' depot':'')+'" style="background:'+col+'">'
+        +(l.L?l.L.l:'?')+'</span><span class="fr-dt">'+jj+'</span>';
+      return l.photo
+        ? '<button type="button" class="fr-cell" data-site="'+esc(s.site)+'" data-i="'+i+'" aria-expanded="false" title="'+esc(titre)+'" aria-label="'+esc(titre)+'">'+inner+'</button>'
+        : '<button type="button" class="fr-cell" data-site="'+esc(s.site)+'" data-i="'+i+'" aria-expanded="false" title="'+esc(titre)+'" aria-label="'+esc(titre)+'">'+inner+'</button>';
+    }).join('');
+    const avecDepot=s.lots.filter(l=>l.depot).length;
+    const dj=s.lots.length?jours(s.lots[s.lots.length-1].fin):null;
+    const resume=s.lots.length
+      ? s.lots.length+' passage'+(s.lots.length>1?'s':'')
+        +(s.lots.length>MAXP?' (10 derniers affichés)':'')
+        +(avecDepot?' · '+avecDepot+' avec dépôt au sol':' · aucun dépôt constaté')
+        +' · dernier '+(dj===0?"aujourd'hui":dj===1?'hier':'il y a '+dj+' jours')
+      : '';
+    return '<div class="frow2">'
+      +'<div><div class="fr-code">'+esc(s.site)+'</div><div class="fr-nom">'+esc(s.nom)+'</div></div>'
+      +'<div>'+(lots.length?'<div class="fr-cells">'+cells+'</div><div class="fr-sum">'+esc(resume)+'</div><div class="fr-det" hidden></div>'
+                          :'<div class="fr-vide">Jamais relevé</div>')+'</div>'
+    +'</div>';
+  }).join('');
+
+  /* « D’où vient la note », dépliable dans chaque carte : les points du flux
+     qui fixe la note, répartis entre les critères du barème actif. Déclarée
+     ici mais appelée plus haut par les cartes : elle ne dépend donc que du
+     barème, pas des constantes de la section ci-dessous. */
+  function dOuVient(s){
+    const f=s.flux.filter(x=>x.sc).sort((a,b)=>b.sc.total-a.sc.total)[0];
+    if(!f) return '';
+    const bar=decrireBareme(), cols=['var(--c1)','var(--c2)','var(--c3)','var(--c4)'];
+    const crit=bar.criteres.map((c,i)=>({k:c.cle,lab:c.libelle,c:cols[i%cols.length]}));
+    const segs=crit.filter(c=>f.sc[c.k]>0).map(c=>
+      '<span class="c-seg" style="width:'+(100*f.sc[c.k]/bar.max).toFixed(2)+'%;background:'+c.c+'"'
+      +' title="'+esc(c.lab+' : '+f.sc[c.k]+' point'+(f.sc[c.k]>1?'s':''))+'"></span>').join('');
+    const vals=crit.map(c=>'<i><span class="c-key" style="background:'+c.c+'"></span>'
+      +esc(c.lab.toLowerCase())+' '+f.sc[c.k]+'</i>').join('');
+    const qui=f.sc.total===0 ? 'Tous les flux au vert.'
+      : 'Note fixée par le flux « '+(FLUX_LABEL[f.flux]||f.flux)+' », le plus pénalisé.';
+    return '<details class="dvn"><summary>D’où vient la note</summary>'
+      +'<p class="dvn-q">'+esc(qui)+'</p>'
+      +'<div class="c-bar" role="img" aria-label="'+esc(crit.map(c=>c.lab.toLowerCase()+' '+f.sc[c.k]).join(', ')+', total '+f.sc.total+' points')+'">'+segs+'</div>'
+      +'<div class="c-end"><b>'+f.sc.total+' point'+(f.sc.total>1?'s':'')+'</b><span class="c-vals">'+vals+'</span></div>'
+      +'</details>';
+  }
+
+  // D'où vient la note : décomposition en trois composantes
+  /* Les trois composantes, leur poids et l'échelle des lettres viennent du
+     barème actif : la page ne recopie plus aucun seuil. */
+  const BAR=decrireBareme();
+  const COULEURS=['var(--c1)','var(--c2)','var(--c3)','var(--c4)'];
+  const COMPO=BAR.criteres.map((c,i)=>({k:c.cle,lab:c.libelle,c:COULEURS[i%COULEURS.length],max:c.max}));
+  const MAXPTS=BAR.max;
+  document.getElementById('compo').innerHTML = sites.map(s=>{
+    const f=s.flux.filter(x=>x.sc).sort((a,b)=>b.sc.total-a.sc.total)[0];
+    const gauche='<div><div class="fr-code">'+esc(s.site)+'</div><div class="fr-nom">'+esc(s.nom)+'</div>'
+      +(f?'<div class="c-flux">'+esc(f.sc.total===0?'tous les flux au vert':FLUX_LABEL[f.flux]||f.flux)+'</div>':'')+'</div>';
+    if(!f) return '<div class="crow">'+gauche+'<div class="fr-vide">Aucun relevé exploitable</div></div>';
+    const segs=COMPO.filter(c=>f.sc[c.k]>0).map(c=>
+      '<span class="c-seg" style="width:'+(100*f.sc[c.k]/MAXPTS).toFixed(2)+'%;background:'+c.c+'"'
+      +' title="'+esc(c.lab+' : '+f.sc[c.k]+' point'+(f.sc[c.k]>1?'s':''))+'"></span>').join('');
+    const vals=COMPO.map(c=>'<i><span class="c-key" style="background:'+c.c+'"></span>'
+      +esc(c.lab.toLowerCase())+' '+f.sc[c.k]+'</i>').join('');
+    return '<div class="crow">'+gauche+'<div>'
+      +'<div class="c-bar" role="img" aria-label="'+esc(FLUX_LABEL[f.flux]||f.flux)+' : '
+        +COMPO.map(c=>c.lab.toLowerCase()+' '+f.sc[c.k]).join(', ')+', total '+f.sc.total+' points, Bac-Score '+f.sc.L.l+'">'+segs+'</div>'
+      +'<div class="c-end"><b>'+f.sc.total+' point'+(f.sc.total>1?'s':'')+'</b>'
+      +'<span class="fscore" style="background:var('+f.sc.L.var+')">'+f.sc.L.l+'</span>'
+      +'<span class="c-vals">'+vals+'</span></div>'
+    +'</div></div>';
+  }).join('');
+  document.getElementById('compo-axe').innerHTML =
+    ['<span class="c-tick" style="left:0">0</span>']
+    .concat(BAR.echelle.filter(e=>e.haut!==null).map(e=>
+      '<span class="c-tick" style="left:'+(100*e.haut/MAXPTS).toFixed(2)+'%;transform:translateX(-50%)">'
+        +e.l+' ≤ '+e.haut+'</span>')).join('');
+  document.getElementById('compo-legend').innerHTML =
+    COMPO.map(c=>'<span><i class="swatch" style="border-radius:3px;background:'+c.c+'"></i>'
+      +esc(c.lab)+' <span style="color:var(--ink-3)">· jusqu\'à '+c.max+' pts</span></span>').join('');
+
+  // Statistiques
+  const sitesReleves=sites.filter(s=>s.dernier).length;
+  const couplesRef=REF.length;
+  const couplesReleves=new Set(obs.filter(o=>REF.some(r=>r.site===o.site&&r.flux===o.flux)).map(o=>o.site+"|"+o.flux)).size;
+  const depots=obs.filter(o=>o.depotSol);
+  const sacsMax=Math.max(0,...obs.map(o=>o.sacs));
+  /* L'unité de l'exploitation est le PASSAGE (une visite d'un îlot), pas le
+     constat : une photo donne un constat par flux, ce qui gonflait les compteurs. */
+  const passages=passagesParSite(obs).flatMap(s=>s.lots);
+  const nbPassages=passages.length, passDepot=passages.filter(l=>l.depot).length;
+  const unitesConnues=REF.filter(r=>r.nbUnites>0).length;
+  const dates=obs.map(o=>o.ts).sort();
+  const periode = dates.length? new Date(dates[0]).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})+" → "+new Date(dates[dates.length-1]).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : "—";
+  /* Mise en route : ce qui conditionne la complétude des notes. */
+  const jauges=[
+    {k:"Îlots photographiés au moins une fois",n:sitesReleves,t:sites.length},
+    {k:"Conteneurs (îlot × flux) photographiés au moins une fois",n:couplesReleves,t:couplesRef},
+    {k:"Nombre de colonnes renseigné dans le référentiel",n:unitesConnues,t:couplesRef,aide:"sans lui, le remplissage n'est pas calculé"}
+  ];
+  const jTot=jauges.reduce((a,j)=>a+j.t,0), jFait=jauges.reduce((a,j)=>a+Math.min(j.n,j.t),0);
+  const pctInit=jTot?Math.round(100*jFait/jTot):100;
+  document.getElementById('init').closest('section').style.display=pctInit>=100?'none':'';
+  document.getElementById('init').innerHTML=
+    '<div class="in-g"><b>'+pctInit+' %</b><span>du projet initialisé</span></div>'
+    +jauges.map(j=>{ const p=j.t?Math.round(100*j.n/j.t):100;
+      return '<div class="in-r"><div class="in-k">'+esc(j.k)+(j.aide&&p<100?' <i>— '+esc(j.aide)+'</i>':'')+'</div>'
+        +'<div class="in-b"><span style="width:'+p+'%"></span></div>'
+        +'<div class="in-v">'+j.n+' / '+j.t+'</div></div>'; }).join('');
+
+  const tiles=[
+    {k:"Passages",v:String(nbPassages),n:"visites d'îlots, sur "+sitesReleves+" îlot"+(sitesReleves>1?"s":"")+" relevé"+(sitesReleves>1?"s":"")},
+    {k:"Passages avec dépôt au sol",v:(nbPassages?Math.round(100*passDepot/nbPassages):0)+" %",n:passDepot+" sur "+nbPassages+(passDepot?" · jusqu'à "+sacsMax+" sacs sur un même point":" · aucun dépôt constaté")},
+    // (constats avec dépôt au sol : remplacé par le pourcentage de passages ci-dessus)
+    {k:"Îlots notés D ou E",v:String(sites.filter(s=>s.L&&(s.L.l==="D"||s.L.l==="E")).length),n:"points à remonter au syndicat"},
+    {k:"Période couverte",v:periode,n:photos.length+" photos analysées"},
+    // (nombre de conteneurs renseigné : déplacé dans « Mise en route du projet »)
+  ];
+  document.getElementById('tiles').innerHTML=tiles.map(t=>
+    '<div class="tile'+(t.alert?' alert':'')+'"><div class="k">'+esc(t.k)+'</div><div class="v">'+esc(t.v)+'</div><div class="n">'+esc(t.n)+'</div></div>').join('');
+
+  // Barres : constats par flux, part avec dépôt au sol
+  const parFlux={};
+  obs.forEach(o=>{(parFlux[o.flux]=parFlux[o.flux]||{t:0,d:0}); parFlux[o.flux].t++; if(o.depotSol) parFlux[o.flux].d++;});
+  const maxT=Math.max(1,...Object.values(parFlux).map(v=>v.t));
+  const lignes=Object.entries(parFlux).sort((a,b)=>b[1].t-a[1].t);
+  document.getElementById('bars').innerHTML =
+    '<div style="font-size:.82rem;color:var(--ink-2);margin-bottom:12px">Constats par flux, et part avec un dépôt au sol</div>'
+    + lignes.map(([f,v])=>{
+      const w=Math.round(100*v.t/maxT), wd=v.t?Math.round(100*v.d/v.t):0;
+      return '<div class="bar"><span class="lab">'+esc(FLUX_LABEL[f]||f)+'</span>'
+        +'<span class="track"><span class="fill" style="width:'+w+'%;background:linear-gradient(90deg,var(--crit) 0 '+(wd*w/100).toFixed(1)+'%,var(--accent) '+(wd*w/100).toFixed(1)+'% 100%)"></span></span>'
+        +'<span class="num">'+v.t+'</span></div>';
+    }).join('')
+    + '<div style="font-size:.74rem;color:var(--ink-3);margin-top:12px">La portion rouge indique les constats où des déchets étaient posés au sol.</div>';
+
+  // Barème du Bac-Score : entièrement décrit par bac-score.js
+  document.getElementById('bareme').innerHTML = BAR.criteres.map(b=>
+    '<div class="lane"><span class="lbl">'+esc(b.libelle)+'</span><span class="cells">'
+    + b.items.map(it=>'<i style="background:var(--surface-2);display:grid;place-items:center;height:auto;padding:5px 4px;font-size:.7rem;color:var(--ink-2);text-align:center;line-height:1.25">'
+        +esc(it.texte)+'<br><b style="font-family:var(--mono);color:var(--ink)">+'+it.points+'</b></i>').join('')
+    +'</span></div>').join('');
+  document.getElementById('echelle').innerHTML = BAR.echelle.map(x=>
+    '<span style="display:inline-flex;align-items:center;gap:7px;font-size:.79rem;color:var(--ink-2)">'
+      +'<b style="display:grid;place-items:center;width:22px;height:22px;border-radius:5px;background:var('+x.var+');color:#fff;font-family:var(--mono);font-size:.78rem">'+x.l+'</b>'
+      +'<span><b style="color:var(--ink)">'+esc(x.lab)+'</b> · '
+      +(x.haut===null ? x.bas+' pt et plus' : x.bas+' à '+x.haut+' pt')+'</span></span>').join('');
+
+  /* Les phrases qui citent des chiffres sont écrites ici, pas dans le HTML :
+     un barème réglé ne doit pas pouvoir être démenti par son explication. */
+  document.getElementById('compo-intro').textContent =
+    "Les points de pénalité du flux qui fixe la note, répartis entre les "
+    + BAR.criteres.length + " critères. La barre va de 0 à " + BAR.max
+    + " points ; au-delà de " + (BAR.seuilDerniereLettre-1) + ", l'îlot est en "
+    + BAR.derniereLettre + ".";
+  document.getElementById('bareme-intro').innerHTML =
+    "Le score additionne des <b>points de pénalité</b> sur " + BAR.criteres.length
+    + " critères, puis convertit le total en lettre. Zéro point donne "
+    + BAR.premiereLettre + ", " + BAR.seuilDerniereLettre + " points ou plus donnent "
+    + BAR.derniereLettre + ". Le détail est affiché sur chaque îlot, de sorte qu'une "
+    + "note se vérifie toujours contre les photos.";
+  document.getElementById('bareme-recidive').textContent =
+    "La récidive est ce qui distingue un incident d'un problème de fond : c'est elle "
+    + "qui permet de montrer au syndicat de collecte qu'un point revient sans cesse, "
+    + "même quand chaque constat pris isolément paraît modeste. Elle se compte en "
+    + "passages sur " + BAR.fenetreJours + " jours : plusieurs photos du même dépôt, "
+    + "prises à moins de " + BAR.passageMinutes + " minutes d'intervalle, ne comptent qu'une fois.";
+}
+
+
+/* Retour vers le site appelant. Deux sources, dans cet ordre : le paramètre
+   ?retour=, qui est une destination et marche donc même dans un onglet neuf ;
+   puis le référent, quand la page a été ouverte depuis un autre site dans le
+   même onglet. Sans l'un ni l'autre, le bouton reste caché — un retour qui ne
+   fait rien est pire qu'un retour absent. */
+(function retour(){
+  const el=document.getElementById('retour');
+  const propre=u=>{try{const x=new URL(u); return /^https?:$/.test(x.protocol)?x:null}catch(e){return null}};
+  let cible=propre(new URL(location.href).searchParams.get('retour')||''), arriere=false;
+  if(!cible){
+    const r=propre(document.referrer);
+    if(r && r.origin!==location.origin && history.length>1){cible=r; arriere=true;}
+  }
+  if(!cible) return;
+  el.href=cible.href;
+  el.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>'
+    +'<span>Retour sur '+esc(cible.hostname.replace(/^www\./,''))+'</span>';
+  el.hidden=false;
+  /* Quand on connaît seulement le référent, un vrai pas en arrière rend au
+     visiteur sa position dans la page d'où il vient. Le lien reste un lien :
+     clic du milieu et ouverture dans un onglet continuent de marcher. */
+  if(arriere) el.addEventListener('click',e=>{
+    if(e.button===0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey){e.preventDefault(); history.back();}
+  });
+})();
+
+Promise.all([
+  chargerConfig(),
+  chargerBareme(appliquerBareme),
+  fetch('donnees.json',{cache:'no-cache'}).then(r=>{if(!r.ok) throw new Error(r.status); return r.json()}),
+])
+  .then(([cfg,,d])=>{
+    const n=normaliser(d);
+    REF=n.REF; OBS=n.OBS;
+    document.getElementById('m-commune').textContent=libelleCommune(n.commune,n.departement);
+    /* La provenance des donnees est nommee par la commune elle-meme : la page
+       ne doit pas pretendre savoir dans quel classeur elle puise. */
+    const src=(cfg.mentions&&cfg.mentions.source)||d.source||'';
+    if(src) document.getElementById('m-source').textContent=
+      'Source : '+src+'. Page calculée à partir des données brutes, sans saisie manuelle.';
+    rendu();
+  })
+  .catch(()=>{
+    document.getElementById('sites').innerHTML=
+      '<p class="fr-vide">Les relevés ne sont pas disponibles pour le moment.</p>';
+  });
+</script>
+
+<p style="max-width:70rem;margin:28px auto 40px;padding:0 18px;font-size:.9rem">
+  <a href="integrer.html">Mettre cet encart sur le site de votre commune &rarr;</a>
+</p>
+
+</body>
+</html>
