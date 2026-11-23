@@ -778,7 +778,7 @@ async function chargerReferentiel() {
     majDerniers(d);
     const sites = sitesDepuis(d);
     if (!sites.length) return;                         // jamais effacer sur une réponse vide
-    SITES = sites;
+    SITES = sites; appliquerValides(d); // points validés ici, pas encore publiés
     try { localStorage.setItem("pav-referentiel", JSON.stringify(sites)); } catch {}
     // Le mode démo a pu démarrer avant l'arrivée du référentiel.
     if (demo && !choixManuel && !courant) demarrerDemo("");
@@ -1986,6 +1986,33 @@ const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;",
 const urlTerrain = () => (CONF.depot && CONF.depot.terrain)
   || (ENDPOINT ? ENDPOINT.replace(/pav-photo(\/?)$/, "pav-terrain$1") : null);
 const sauverAVerifier = () => { try { localStorage.setItem("pav-averifier", JSON.stringify(A_VERIFIER)); } catch {} };
+/* Points validés ou écartés sur CE téléphone. Un point validé entre dans la
+tournée aussitôt, utilisable tout de suite (reconnu par le GPS, photographiable) :
+le serveur l'a déjà inscrit au Référentiel de la commune, seul donnees.json
+attend la prochaine publication (toutes les 15 min). Jusque-là on le garde ici,
+pour qu'un rechargement ne le retire pas de la tournée et ne le fasse pas
+revenir dans les points à vérifier. Le souvenir s'efface dès que donnees.json
+le reflète, et au bout de 48 h dans tous les cas. */
+let VALIDES = {};
+try { VALIDES = JSON.parse(localStorage.getItem("pav-valides") || "{}") || {}; } catch {}
+const sauverValides = () => { try { localStorage.setItem("pav-valides", JSON.stringify(VALIDES)); } catch {} };
+function appliquerValides(d) {
+  const ref = d && Array.isArray(d.referentiel) ? d.referentiel : null;
+  for (const [code, v] of Object.entries(VALIDES)) {
+    const reflete = ref && (v.site
+      ? ref.some(r => String(r.site) === code)
+      : !((d.aVerifier || []).some(r => String(r.site) === code)));
+    if (reflete || Date.now() - v.t > 48 * 3600000) { delete VALIDES[code]; continue; }
+    A_VERIFIER = A_VERIFIER.filter(x => x.code !== code);
+    if (v.site && !SITES.some(s => s.code === code)) SITES.push(v.site);
+  }
+  sauverValides();
+}
+function retenirValide(code, site) {
+  VALIDES[code] = { t: Date.now(), site: site || null };
+  sauverValides(); appliquerValides(); sauverAVerifier(); rendre();
+}
+appliquerValides();
 
 function aVerifierDepuis(d) {
   const par = new Map();
@@ -2005,7 +2032,7 @@ async function chargerAVerifier() {
     if (!r.ok) return;
     const d = await r.json();
     if (!d || !Array.isArray(d.referentiel)) return; // réponse douteuse : on garde le cache
-    A_VERIFIER = aVerifierDepuis(d);
+    A_VERIFIER = aVerifierDepuis(d); appliquerValides(d);
     sauverAVerifier();
     rendreAVerifier(true);
   } catch {} // hors ligne : la liste en cache reste affichée
@@ -2081,6 +2108,7 @@ async function envoyerTerrain(code, action) {
   fd.append("commune", (CONF.commune && CONF.commune.nom) || "");
   fd.append("site_code", code);
   fd.append("action", action);
+  let nouveauSite = null; // le point tel que validé, pour l'ajouter tout de suite à la tournée
   if (action === "valider") {
     const u = {};
     document.querySelectorAll("#averif-l output[data-n]").forEach(o => { const v = Number(o.textContent); if (v > 0) u[o.dataset.n] = v; });
@@ -2088,6 +2116,7 @@ async function envoyerTerrain(code, action) {
     const nomSaisi = (($("av-nom") || {}).value || "").trim();
       if (!nomSaisi) { dire("Indique un nom pour ce point."); return; }
       fd.append("nom", nomSaisi);
+      nouveauSite = { code, nom: nomSaisi, lat: s.lat, lon: s.lon, postes: u };
       const garderCarte = !!document.querySelector('#averif-l input[name="av-pos"][value="carte"]:checked');
       if (garderCarte) { fd.append("position", "carte"); fd.append("unites", JSON.stringify(u)); } else {
       dire("Lecture de la position GPS…");
@@ -2097,7 +2126,7 @@ async function envoyerTerrain(code, action) {
     if (pos.precision_m > 50) { dire(`Signal GPS trop imprécis (±${pos.precision_m} m) : mets-toi à découvert et réessaie.`); return; }
     const d = Math.round(distance(pos, s));
     if (d > 300 && !confirm(`Tu es à ${lireDistance(d)} de l'endroit indiqué par la carte.\n\nLes conteneurs sont-ils bien ici, devant toi ? La position du point sera remplacée par la tienne.`)) { dire(""); return; }
-    fd.append("lat", pos.lat); fd.append("lon", pos.lon); fd.append("precision_m", pos.precision_m);
+    fd.append("lat", pos.lat); fd.append("lon", pos.lon); fd.append("precision_m", pos.precision_m); nouveauSite.lat = pos.lat; nouveauSite.lon = pos.lon;
     fd.append("unites", JSON.stringify(u)); }
   } else if (!confirm(`« ${s.nom} » n'existe pas ici ?\n\nLe point sera retiré des points à vérifier. L'administrateur pourra toujours le rétablir.`)) return;
 
@@ -2110,10 +2139,14 @@ async function envoyerTerrain(code, action) {
     let j = null; try { j = await r.json(); } catch {}
     if (!r.ok || !j || !j.ok) { dire((j && j.motif) || `Le serveur a répondu ${r.status} : réessaie plus tard.`); return; }
     A_VERIFIER = A_VERIFIER.filter(x => x.code !== code); sauverAVerifier();
+    const codeFinal = (j && j.site_code) || code;
+    if (nouveauSite) nouveauSite.code = codeFinal;
+    retenirValide(codeFinal, action === "valider" ? nouveauSite : null);
+    if (codeFinal !== code) { VALIDES[code] = { t: Date.now(), site: null }; sauverValides(); }
     averifOuvert = null;
     $("flash-t").textContent = action === "valider" ? "Point validé" : "Point retiré";
     $("flash-s").textContent = action === "valider"
-      ? `${s.nom} rejoindra la tournée à la prochaine mise à jour, d'ici un quart d'heure environ.`
+      ? `${(nouveauSite && nouveauSite.nom) || s.nom} est ajouté à la tournée : tu peux le photographier dès maintenant.`
       : `${s.nom} est noté comme inexistant.`;
     $("flash").hidden = false;
     rendreAVerifier(true);
