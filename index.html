@@ -2137,14 +2137,17 @@ async function envoyerTerrain(code, action) {
     const r = await fetch(url, { method: "POST", body: fd });
     if (r.status === 401 || r.status === 403) { dire("Code d'accès refusé."); ouvrirCode("Ce code a été refusé par le serveur."); return; }
     let j = null; try { j = await r.json(); } catch {}
-    if (!r.ok || !j || !j.ok) { dire((j && j.motif) || `Le serveur a répondu ${r.status} : réessaie plus tard.`); return; }
+    /* « Déjà vérifié » : validé depuis un autre téléphone, ou ici avant que
+       donnees.json ne soit republié. Ce n'est pas une erreur : on le traite comme validé. */
+    const deja = !!(j && j.ok === false && /déjà été vérifié/i.test(String(j.motif || "")));
+    if (!deja && (!r.ok || !j || !j.ok)) { dire((j && j.motif) || `Le serveur a répondu ${r.status} : réessaie plus tard.`); return; }
     A_VERIFIER = A_VERIFIER.filter(x => x.code !== code); sauverAVerifier();
     const codeFinal = (j && j.site_code) || code;
     if (nouveauSite) nouveauSite.code = codeFinal;
     retenirValide(codeFinal, action === "valider" ? nouveauSite : null);
     if (codeFinal !== code) { VALIDES[code] = { t: Date.now(), site: null }; sauverValides(); }
     averifOuvert = null;
-    $("flash-t").textContent = action === "valider" ? "Point validé" : "Point retiré";
+    $("flash-t").textContent = deja ? "Point déjà validé" : action === "valider" ? "Point validé" : "Point retiré";
     $("flash-s").textContent = action === "valider"
       ? `${(nouveauSite && nouveauSite.nom) || s.nom} est ajouté à la tournée : tu peux le photographier dès maintenant.`
       : `${s.nom} est noté comme inexistant.`;
