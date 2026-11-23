@@ -1,0 +1,33 @@
+{
+  "_": "Généré par n8n depuis l’onglet Parametres du classeur de la commune. Ne pas modifier ici : ce serait écrasé.",
+  "commune": {
+    "nom": "Saint-Rambert-d'Albon",
+    "departement": "26",
+    "codePostal": "26140",
+    "codeInsee": "26325",
+    "prefixeCode": "SRA",
+    "logo": "logo.png",
+    "logoDrive": "https://drive.google.com/file/d/10jopdsSIXhKuPq21ROcSFvR03WA_HeH1/view"
+  },
+  "adresses": {
+    "application": "https://collecte.essai-pav.fr/",
+    "meteo": "https://collecte.essai-pav.fr/meteo/",
+    "referentiel": "meteo/donnees.json"
+  },
+  "terrain": {
+    "rayonM": 100,
+    "precisionMaxM": 30,
+    "alerteJours": 2
+  },
+  "mentions": {
+    "source": "classeur de la commune, feuilles Référentiel et Observations"
+  },
+  "depot": {
+    "endpoint": "https://n8n.srv1040760.hstgr.cloud/webhook/pav-photo"
+  },
+  "photos": {
+    "hebergeur": "google-drive",
+    "vue": "https://drive.google.com/file/d/{id}/view",
+    "vignette": "https://drive.google.com/thumbnail?id={id}&sz=w{largeur}"
+  }
+}
