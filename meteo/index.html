@@ -541,7 +541,7 @@ function rendu(){
       return '<li><b>'+esc(FLUX_LABEL[o.flux]||o.flux)+'</b> — '+esc(bouts.join(' · '))
         +(o.texte?'<span class="fd-tx">'+esc(o.texte)+'</span>':'')+'</li>';
     }).join('');
-    const titre=(l.L?'Bac-Score '+l.L.l+' — '+l.L.lab+' · '+l.pts+' point'+(l.pts>1?'s':''):'Non noté')+' · '+dateFR(l.fin);
+    const titre=(l.L?'Bac-Score '+l.L.l+' — '+l.L.lab+' · '+l.pts+' point'+(l.pts>1?'s':''):'Non noté')+' · '+dateFR(l.fin)+(l.bar&&l.bar.nom?' · barème « '+l.bar.nom+' »':'');
     return '<div class="fd-t"><span class="fd-l" style="background:'+col+'">'+(l.L?l.L.l:'?')+'</span><span>'+esc(titre)+'</span></div>'
       +(photos?'<div class="fd-ph">'+photos+'</div>':'<p class="fd-v">Pas de photo pour ce passage.</p>')
       +'<ul class="fd-f">'+constats+'</ul>';
@@ -592,7 +592,7 @@ function rendu(){
     const qui=f.sc.total===0 ? 'Tous les flux au vert.'
       : 'Note fixée par le flux « '+(FLUX_LABEL[f.flux]||f.flux)+' », le plus pénalisé.';
     return '<details class="dvn"><summary>D’où vient la note</summary>'
-      +'<p class="dvn-q">'+esc(qui)+'</p>'
+      +'<p class="dvn-q">'+esc(qui)+(f.bar&&f.bar.nom?' '+esc('Barème « '+f.bar.nom+' »'+(f.bar.depuis>'2010'?', en vigueur depuis le '+new Date(f.bar.depuis+'T00:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}):'')+'.'):'')+'</p>'
       +'<div class="c-bar" role="img" aria-label="'+esc(crit.map(c=>c.lab.toLowerCase()+' '+f.sc[c.k]).join(', ')+', total '+f.sc.total+' points')+'">'+segs+'</div>'
       +'<div class="c-end"><b>'+f.sc.total+' point'+(f.sc.total>1?'s':'')+'</b><span class="c-vals">'+vals+'</span></div>'
       +'</details>';
@@ -711,7 +711,8 @@ function rendu(){
     + " critères, puis convertit le total en lettre. Zéro point donne "
     + BAR.premiereLettre + ", " + BAR.seuilDerniereLettre + " points ou plus donnent "
     + BAR.derniereLettre + ". Le détail est affiché sur chaque îlot, de sorte qu'une "
-    + "note se vérifie toujours contre les photos.";
+    + "note se vérifie toujours contre les photos."
++ (BAR.versions && BAR.versions.length > 1 && BAR.versionActive ? " Barème en vigueur : « " + esc(BAR.versionActive.nom) + " ». Chaque relevé reste noté avec le barème en vigueur le jour de la photo : un changement de barème ne réécrit pas les notes passées." : "");
   document.getElementById('bareme-recidive').textContent =
     "La récidive est ce qui distingue un incident d'un problème de fond : c'est elle "
     + "qui permet de montrer au syndicat de collecte qu'un point revient sans cesse, "

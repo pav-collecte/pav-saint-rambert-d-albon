@@ -84,7 +84,7 @@ async function viderLaFile() {
   for (const it of file) {
     const fd = new FormData();
     fd.append("photo", it.photo, it.uuid + ".jpg");
-    for (const k of ["uuid", "horodatage", "site_code", "lat", "lon", "precision_m", "source"]) {
+    for (const k of ["uuid", "horodatage", "site_code", "lat", "lon", "precision_m", "source", "plein", "sale"]) {
       if (it[k] !== undefined && it[k] !== null) fd.append(k, it[k]);
     }
     fd.append("code", code);

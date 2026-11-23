@@ -52,6 +52,15 @@ export function libelleCommune(nom, departement) {
    que celui-là à réécrire, sans risquer de toucher à l'adresse du webhook ni
    au reste de la configuration de la commune. */
 export async function chargerBareme(appliquer, chemin = "../bareme.json") {
+  /* D'abord le barème propre à la commune (bareme-commune.json, écrit par n8n
+     avec toutes ses versions datées), sinon le barème commun du moteur. */
+  try {
+    const rc = await fetch(chemin.replace("bareme.json", "bareme-commune.json"), { cache: "no-cache" });
+    if (rc.ok) {
+      const bc = await rc.json();
+      if (bc && Array.isArray(bc.versions) && bc.versions.length) return appliquer(bc);
+    }
+  } catch {}
   let brut;
   try {
     const r = await fetch(chemin, { cache: "no-cache" });

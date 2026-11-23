@@ -154,6 +154,10 @@ export const LETTRES = [];
 export let FENETRE_PASSAGE = 0;
 
 export function appliquerBareme(brut) {
+  if (brut && Array.isArray(brut.versions) && brut.versions.length) {
+    HISTO = brut.versions.map(preparerVersion).sort((a, b) => a.t - b.t);
+    brut = versionA(Date.now()).B;
+  } else HISTO = [];
   B = normaliserBareme(brut === undefined ? BAREME_DEFAUT : brut);
   LETTRES.length = 0;
   B.lettres.forEach((x,i) => {
@@ -164,6 +168,47 @@ export function appliquerBareme(brut) {
   return B;
 }
 export const bareme = () => B;
+
+/* ── Versions datées du barème ─────────────────────────────────────────────
+   bareme.json peut porter une liste « versions », chacune avec sa date
+   d'entrée en vigueur (« depuis », AAAA-MM-JJ). Un relevé est noté avec la
+   version en vigueur le jour de la photo : changer de barème ne réécrit pas
+   les notes déjà publiées. Sans liste, il n'y a qu'une version. */
+let HISTO = [];
+let LCOUR = LETTRES;
+const debutJour = d => { const t = new Date(String(d) + "T00:00:00").getTime(); return Number.isFinite(t) ? t : -Infinity; };
+function preparerVersion(brut, i) {
+  const b = normaliserBareme(brut);
+  const L = b.lettres.map((x, k) => {
+    const st = STYLE_LETTRE[x.l] || { var:"--s"+x.l, fill: STYLE_SECOURS[Math.min(k,4)] };
+    return { l:x.l, max: x.max === null ? Infinity : x.max, lab:x.lab, desc:x.desc, var:st.var, fill:st.fill };
+  });
+  return {
+    t: brut && brut.depuis ? debutJour(brut.depuis) : -Infinity,
+    depuis: String((brut && brut.depuis) || ""), id: String((brut && brut.id) || ("v" + (i + 1))),
+    nom: String((brut && brut.nom) || ""), origine: String((brut && brut.origine) || ""),
+    B: b, L, fenetre: b.passage.minutes * 60000,
+  };
+}
+/* La version en vigueur à une date ; avant la première, la plus ancienne. */
+function versionA(ts) {
+  if (!HISTO.length) return null;
+  const t = new Date(ts).getTime();
+  let v = HISTO[0];
+  for (const h of HISTO) if (h.t <= t) v = h;
+  return v;
+}
+/* Exécute un calcul avec le barème en vigueur à cette date-là. */
+function sous(ts, fn) {
+  const h = versionA(ts);
+  if (!h) return fn();
+  const b0 = B, l0 = LCOUR, f0 = FENETRE_PASSAGE;
+  B = h.B; LCOUR = h.L; FENETRE_PASSAGE = h.fenetre;
+  try { return fn(); } finally { B = b0; LCOUR = l0; FENETRE_PASSAGE = f0; }
+}
+const infoVersion = h => h ? { id: h.id, nom: h.nom, depuis: h.depuis, origine: h.origine } : null;
+export const versionDu = ts => infoVersion(versionA(ts));
+export const versionsBareme = () => HISTO.map(infoVersion);
 
 /* Le total maximum atteignable : sert d'échelle aux barres de la page. */
 export const maxPoints = () =>
@@ -185,7 +230,7 @@ export const CAUSE_LABEL={incivilite:"Incivilité",inadequation:"Inadéquation d
 export const ORDRE_FLUX={verre:0,ordures_menageres:1,emballages:2,papier:3,carton:4,biodechets:5,textile:6};
 
 /* ── Les trois critères, lus dans le barème actif ─────────────────────── */
-export function lettre(pts){ return LETTRES.find(x=>pts<=x.max) || LETTRES[LETTRES.length-1]; }
+export function lettre(pts){ return LCOUR.find(x=>pts<=x.max) || LCOUR[LCOUR.length-1]; }
 
 export function ptsProprete(sacs,depot){
   if(!depot && sacs===0) return B.proprete.paliers[0].points;
@@ -272,6 +317,8 @@ export function decrireBareme(){
     passageMinutes: B.passage.minutes,
     agregation: {...B.agregation},
     problemes: B.problemes || [],
+    versions: versionsBareme(),
+    versionActive: versionDu(Date.now()),
   };
 }
 
@@ -357,6 +404,9 @@ export function calcule(REF,obs){
       if(!parSite[site].dernier||new Date(o.ts)>new Date(parSite[site].dernier)) parSite[site].dernier=o.ts;
       return;
     }
+    /* Ce relevé est noté avec le barème en vigueur le jour de sa photo. */
+    const h0=versionA(o.ts), b0=B, l0=LCOUR, f0=FENETRE_PASSAGE;
+    if(h0){B=h0.B; LCOUR=h0.L; FENETRE_PASSAGE=h0.fenetre;}
     const p=niveauProprete(o), rm=niveauRemplissage(o,ref);
     const niveau=Math.max(p, rm.n==null?0:rm.n);
     const nRecid=nPassagesAvecDepot(site,flux,new Date(o.ts).getTime(),obs);
@@ -367,7 +417,8 @@ export function calcule(REF,obs){
     bouts.push(rm.txt);
     if(o.cause) bouts.push((CAUSE_LABEL[o.cause]||o.cause).toLowerCase());
     if(nRecid>1) bouts.push(nRecid+" passages avec dépôt sur "+B.recidive.fenetreJours+" j");
-    parSite[site].flux.push({flux,niveau,horsRef,sc,detail:bouts.join(" · "),ts:o.ts,test:o.test,
+    B=b0; LCOUR=l0; FENETRE_PASSAGE=f0;
+    parSite[site].flux.push({flux,niveau,horsRef,sc,bar:infoVersion(h0),detail:bouts.join(" · "),ts:o.ts,test:o.test,
       photo:o.photo||"", publiable:!!o.photo && !o.personneVisible && !o.plaqueLisible, texte:o.texte||""});
     if(!parSite[site].dernier||new Date(o.ts)>new Date(parSite[site].dernier)) parSite[site].dernier=o.ts;
   });
@@ -381,7 +432,7 @@ export function calcule(REF,obs){
     s.niveau=n.length?pire(n):null;
     const scs=s.flux.filter(f=>f.sc).map(f=>f.sc.total);
     s.pts=scs.length?pire(scs):null;
-    s.L=s.pts===null?null:lettre(s.pts);
+    s.L=s.pts===null?null:sous(s.flux.filter(f=>f.sc).map(f=>f.ts).sort().pop(),()=>lettre(s.pts));
     s.flux.sort((a,b)=>(ORDRE_FLUX[a.flux]??9)-(ORDRE_FLUX[b.flux]??9));
   });
   return Object.values(parSite).sort((a,b)=>a.site.localeCompare(b.site));
@@ -413,11 +464,11 @@ export function passagesParSite(REF,obs){
         if(o.depotSol) depot=true;
         if(o.vues===0 && !o.inaccessible) return;
         const ref=unitesRef(REF,o.site,o.flux,obs);
-        const nRecid=nPassagesAvecDepot(o.site,o.flux,new Date(o.ts).getTime(),obs);
-        const total=ptsProprete(o.sacs,o.depotSol)+ptsRemplissage(o,ref)+ptsRecidive(nRecid);
+        
+        const total=sous(o.ts,()=>ptsProprete(o.sacs,o.depotSol)+ptsRemplissage(o,ref)+ptsRecidive(nPassagesAvecDepot(o.site,o.flux,new Date(o.ts).getTime(),obs)));
         if(pts===null||total>pts){pts=total; pire=o;}
       });
-      lot.pts=pts; lot.L=pts===null?null:lettre(pts); lot.depot=depot;
+      lot.pts=pts; lot.L=pts===null?null:sous(pire.ts,()=>lettre(pts)); lot.bar=pire?versionDu(pire.ts):null; lot.depot=depot;
       lot.photo=(pire||lot.obs[0]).photo;
     });
     sites[code].lots=lots;
