@@ -2026,8 +2026,11 @@ const sauverValides = () => { try { localStorage.setItem("pav-valides", JSON.str
 function appliquerValides(d) {
   const ref = d && Array.isArray(d.referentiel) ? d.referentiel : null;
   for (const [code, v] of Object.entries(VALIDES)) {
+    // Publiée plus de 2 min après la validation sans contenir le point : il a
+    // été supprimé entre-temps (depuis la console) : on l'oublie aussi.
+    const publieApres = !!(d && d.maj && Date.parse(d.maj) > v.t + 120000);
     const reflete = ref && (v.site
-      ? ref.some(r => String(r.site) === code)
+      ? (ref.some(r => String(r.site) === code) || publieApres)
       : !((d.aVerifier || []).some(r => String(r.site) === code)));
     if (reflete || Date.now() - v.t > 48 * 3600000) { delete VALIDES[code]; continue; }
     A_VERIFIER = A_VERIFIER.filter(x => x.code !== code);
