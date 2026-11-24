@@ -1750,6 +1750,8 @@ function poserCode(v) {
      que c'est le bon, sans le livrer à qui regarde par-dessus l'épaule — ni à
      une capture d'écran. */
   if (l) l.textContent = CODE ? "Code ••••" + CODE.slice(-2) : "Code d'accès";
+  // Nouveau code : son rôle est redemandé (différé : la fonction est définie plus bas).
+  setTimeout(() => { try { verifierRole(); } catch {} }, 0);
 }
 function masquerCode(masque) {
   $("code-i").type = masque ? "password" : "text";
@@ -1931,7 +1933,7 @@ if (!navigator.geolocation) {
   );
 }
 rendre();
-chargerConfig().then(chargerReferentiel).then(chargerAVerifier);
+chargerConfig().then(chargerReferentiel).then(chargerAVerifier).then(() => verifierRole());
 // Les photos du jour sont relues au démarrage : rouvrir la page ne perd rien.
 rechargerVignettes().then(rendre).catch(() => {});
 
@@ -1982,6 +1984,31 @@ La position retenue est celle du téléphone au moment de la validation. */
 let A_VERIFIER = [];
 try { A_VERIFIER = JSON.parse(localStorage.getItem("pav-averifier") || "[]"); } catch {}
 let averifOuvert = null, averifEnvoi = false;
+/* Rôle du code d'accès. Seul un « administrateur terrain » (réglé dans la
+console, onglet Releveurs de la commune) valide ou écarte les points à
+vérifier : le serveur le refuse de toute façon à un agent, on évite seulement
+de lui montrer ce qu'il ne peut pas faire. Le dernier rôle connu est gardé
+pour le hors-ligne, et il ne vaut que pour le code qui l'a obtenu. */
+let ADMIN = null;
+try { ADMIN = JSON.parse(localStorage.getItem("pav-admin") || "null"); } catch {}
+const estAdmin = () => !!(ADMIN && ADMIN.admin && ADMIN.code === CODE);
+async function verifierRole() {
+  const url = urlTerrain();
+  if (!url || !CODE || !navigator.onLine) return;
+  try {
+    const fd = new FormData();
+    fd.append("code", CODE);
+    fd.append("commune", (CONF.commune && CONF.commune.nom) || "");
+    fd.append("action", "role");
+    const r = await fetch(url, { method: "POST", body: fd });
+    let j = null; try { j = await r.json(); } catch {}
+    if (r.status === 401 || r.status === 403) ADMIN = { code: CODE, admin: false };
+    else if (r.ok && j && j.ok) ADMIN = { code: CODE, admin: !!j.admin, nom: j.nom || "" };
+    else return;
+    try { localStorage.setItem("pav-admin", JSON.stringify(ADMIN)); } catch {}
+    rendreAVerifier(true);
+  } catch {}
+}
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const urlTerrain = () => (CONF.depot && CONF.depot.terrain)
   || (ENDPOINT ? ENDPOINT.replace(/pav-photo(\/?)$/, "pav-terrain$1") : null);
@@ -2075,8 +2102,9 @@ ouvert, seule la distance change — sinon les compteurs saisis seraient
 remis à zéro à chaque mouvement du téléphone. */
 function rendreAVerifier(force) {
   const box = $("averif"); if (!box) return;
-  box.hidden = !A_VERIFIER.length;
-  if (!A_VERIFIER.length) return;
+  const visibles = estAdmin() ? A_VERIFIER.length : 0; // réservé aux administrateurs terrain
+  box.hidden = !visibles;
+  if (!visibles) return;
   const ouvert = averifOuvert && A_VERIFIER.find(s => s.code === averifOuvert);
   if (ouvert && !force) { const p = $("av-dist"); if (p) p.textContent = texteDistance(ouvert); }
   const liste = A_VERIFIER.map(s => ({ s, d: position ? Math.round(distance(position, s)) : null }))
