@@ -2086,7 +2086,8 @@ function fluxProposes(s) {
   const f = [];
   SITES.forEach(x => Object.keys(x.postes).forEach(k => { if (!f.includes(k)) f.push(k); }));
   Object.keys(s.postes).forEach(k => { if (!f.includes(k)) f.push(k); });
-  return f.length ? f : ["ordures_menageres", "emballages", "verre", "papier"];
+  // Toujours proposer les flux usuels (dont carton et textile), en plus de ceux de la commune.
+  return [...new Set([...f, "ordures_menageres", "emballages", "verre", "papier", "carton", "textile"])];
 }
 
 function formulaireAVerifier(s) {
@@ -2224,7 +2225,9 @@ const NOUV = { ouvert: false, envoi: false, u: {}, info: "" };
 function fluxNouveau() {
   const f = new Set();
   for (const s of SITES) for (const k of Object.keys((s && s.postes) || {})) f.add(k);
-  return f.size ? [...f] : ["ordures_menageres", "emballages", "verre", "papier"];
+  // Flux de la commune, plus les flux usuels (dont carton et textile).
+  for (const k of ["ordures_menageres", "emballages", "verre", "papier", "carton", "textile"]) f.add(k);
+  return [...f];
 }
 const nvDire = t => { const m = $("nv-msg"); if (m) m.textContent = t; };
 function rendreNouveau() {
