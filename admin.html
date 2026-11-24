@@ -53,6 +53,8 @@ button:disabled { opacity: .5; cursor: default; }
 .nouveau .gros { font: 500 26px/1.2 "IBM Plex Mono", monospace; letter-spacing: .06em; margin: 6px 0; word-break: break-all; }
 .nouveau .actions button { background: var(--surface); }
 .vide { color: var(--muted); font-size: 14px; }
+.qr { background: #fff; border-radius: 10px; padding: 12px; margin: 10px auto; width: 100%; max-width: 15rem; }
+.qr svg { display: block; width: 100%; height: auto; }
 </style>
 </head>
 <body>
@@ -131,7 +133,9 @@ function rendreListe() {
       + (a.role === "admin" ? `<span class="badge admin">Admin</span>` : `<span class="badge">Agent</span>`)
       + (a.actif ? "" : `<span class="badge off">Désactivé</span>`) + `</div>`
       + `<div class="code"><span data-code="${esc(a.code)}">${esc(a.code.slice(0, a.code.indexOf("-") + 1))}••••••</span>`
-      + `<button type="button" data-voir="${esc(a.code)}">Afficher</button></div>`
+      + `<button type="button" data-voir="${esc(a.code)}">Afficher</button>`
+      + (a.actif ? `<button type="button" data-qr="${esc(a.code)}">QR d'accès</button>` : "") + `</div>`
+      + `<div data-remise="${esc(a.code)}"></div>`
       + (moi ? "" : `<div class="actions">`
         + `<button type="button" data-actif="${esc(a.code)}" data-v="${a.actif ? "non" : "oui"}">${a.actif ? "Désactiver" : "Réactiver"}</button>`
         + `<button type="button" data-role="${esc(a.code)}" data-v="${a.role === "admin" ? "agent" : "admin"}">${a.role === "admin" ? "Passer agent" : "Passer admin"}</button>`
@@ -160,6 +164,43 @@ async function charger() {
   }
 }
 
+/* Remise d'un accès : un QR code qui ouvre l'appli de la commune avec le code
+   déjà enregistré (l'appli lit ?code=…, le garde et l'efface de l'adresse).
+   L'agent scanne, et sa tournée est prête. Le code reste aussi lisible en clair. */
+const adresseAppli = () => (CONF.adresses && CONF.adresses.application) || location.href.replace(/admin\.html.*$/, "");
+function lienAgent(code) {
+  const u = new URL(adresseAppli(), location.href);
+  u.searchParams.set("code", code);
+  return u.href;
+}
+let QR = null;
+async function dessinerQR(svg, texte) {
+  try {
+    if (!QR) QR = await import("./qr.js");
+    QR.dessiner(svg, texte);
+  } catch { svg.replaceWith(Object.assign(document.createElement("p"), { className: "sous", textContent: "QR code indisponible : utilise « Copier » ou « Envoyer… »." })); }
+}
+function montrerRemise(n, box) {
+  const lien = lienAgent(n.code);
+  box.innerHTML = `<div class="nouveau"><div>Accès de <b>${esc(n.nom || "")}</b>${n.role === "admin" ? " (administrateur)" : ""}</div>`
+    + `<div class="qr"><svg role="img" aria-label="QR code d'accès de ${esc(n.nom || "")}"></svg></div>`
+    + `<div class="sous">L'agent scanne ce QR avec l'appareil photo de son téléphone : l'appli s'ouvre avec son code déjà enregistré.</div>`
+    + `<div class="gros">${esc(n.code || "")}</div>`
+    + `<div class="sous">Code à saisir à la main si besoin. À remettre en main propre : ce QR vaut accès.</div>`
+    + `<div class="actions"><button type="button" data-r="copier">Copier le lien</button>`
+    + (navigator.share ? `<button type="button" data-r="envoyer">Envoyer…</button>` : "")
+    + `<button type="button" data-r="fermer">Fermer</button></div></div>`;
+  dessinerQR(box.querySelector("svg"), lien);
+  const texte = `Tournée PAV ${(CONF.commune && CONF.commune.nom) || ""} — ouvre ce lien pour démarrer (ton code ${n.code} est inclus) :\n${lien}`;
+  box.onclick = async e => {
+    const b = e.target.closest("button[data-r]"); if (!b) return;
+    if (b.dataset.r === "fermer") { box.innerHTML = ""; return; }
+    if (b.dataset.r === "envoyer") { navigator.share({ title: "Accès tournée PAV", text: texte }).catch(() => {}); return; }
+    try { await navigator.clipboard.writeText(texte); b.textContent = "Copié"; } catch { b.textContent = "Copie impossible"; }
+  };
+  box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
 $("code-ok").addEventListener("click", () => {
   const v = $("code").value.trim().toUpperCase();
   if (!v) { dire("acces-msg", "Saisis ton code.", true); return; }
@@ -176,18 +217,9 @@ $("a-ok").addEventListener("click", async () => {
   try {
     const j = await appeler("agent_ajouter", { nom, role: $("a-role").value });
     AGENTS = j.agents || AGENTS; rendreListe();
-    const n = j.nouveau || {};
-    const appli = (CONF.adresses && CONF.adresses.application) || location.href.replace(/admin\.html.*$/, "");
     $("a-nom").value = ""; $("a-role").value = "agent";
     dire("ajout-msg", "");
-    $("a-res").innerHTML = `<div class="nouveau"><div>Code d'accès de <b>${esc(n.nom || nom)}</b>${n.role === "admin" ? " (administrateur)" : ""} :</div>`
-      + `<div class="gros">${esc(n.code || "")}</div>`
-      + `<div class="sous">À lui remettre en main propre, avec l'adresse de l'appli : ${esc(appli)}</div>`
-      + `<div class="actions"><button type="button" id="r-copier">Copier</button>`
-      + (navigator.share ? `<button type="button" id="r-partager">Envoyer…</button>` : "") + `</div></div>`;
-    const texte = `Tournée PAV ${(CONF.commune && CONF.commune.nom) || ""} — ton code d'accès : ${n.code}\nAppli : ${appli}`;
-    $("r-copier").onclick = async () => { try { await navigator.clipboard.writeText(texte); $("r-copier").textContent = "Copié"; } catch { $("r-copier").textContent = "Copie impossible"; } };
-    if ($("r-partager")) $("r-partager").onclick = () => navigator.share({ title: "Code d'accès tournée PAV", text: texte }).catch(() => {});
+    montrerRemise(j.nouveau || { nom, code: "" }, $("a-res"));
   } catch (e) {
     if (e.acces) montrerAcces(e.message); else dire("ajout-msg", e.message, true);
   } finally { ENVOI = false; $("a-ok").disabled = false; }
@@ -195,6 +227,13 @@ $("a-ok").addEventListener("click", async () => {
 
 $("liste").addEventListener("click", async e => {
   const b = e.target.closest("button"); if (!b) return;
+  if (b.closest("[data-remise]")) return; // boutons de la remise : gérés par montrerRemise
+  if (b.dataset.qr) {
+    const a = AGENTS.find(x => x.code === b.dataset.qr);
+    const box = [...$("liste").querySelectorAll("[data-remise]")].find(d => d.dataset.remise === b.dataset.qr);
+    if (a && box) { if (box.innerHTML) box.innerHTML = ""; else montrerRemise(a, box); }
+    return;
+  }
   if (b.dataset.voir) {
     const s = $("liste").querySelector(`span[data-code="${CSS.escape(b.dataset.voir)}"]`);
     const ouvert = b.textContent === "Masquer";
