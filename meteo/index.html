@@ -408,12 +408,26 @@ function rendu(){
   const photos=[...new Set(obs.map(o=>o.photo))];
   document.getElementById('m-nb').textContent = photos.length+" photos · "+obs.length+" constats";
 
+  /* Dernier passage sans aucune photo publiée : la publication a retiré l'image
+     (personne ou plaque reconnaissable). On le dit, plutôt que de laisser un vide. */
+  function raisonSansPhoto(s){
+    const rows=obs.filter(o=>o.site===s.site);
+    const der=rows.map(o=>o.ts).sort().pop();
+    if(!der) return '';
+    const t0=Date.parse(der)-30*60000;
+    const passage=rows.filter(o=>Date.parse(o.ts)>=t0);
+    const pers=passage.some(o=>o.personneVisible), plaque=passage.some(o=>o.plaqueLisible);
+    if(!pers&&!plaque) return '';
+    const quoi=pers&&plaque?'une personne et une plaque d\'immatriculation y sont reconnaissables'
+      :pers?'une personne y est reconnaissable':'une plaque d\'immatriculation y est lisible';
+    return '<div class="sansphoto">Photo du dernier relevé non publiée : '+quoi+'. Le constat compte bien dans la note ; l\'image reste privée.</div>';
+  }
   /* La photo qui justifie la note : celle du flux le plus dégradé du dernier
      passage. Rien si elle porte une personne ou une plaque lisible — le relevé
      compte dans la note, c'est l'image qui ne se publie pas. */
   function preuve(s){
     const avecPhoto=s.flux.filter(f=>f.photo);
-    if(!avecPhoto.length) return '';
+    if(!avecPhoto.length) return raisonSansPhoto(s);
     const f=avecPhoto.slice().sort((a,b)=>((b.sc?b.sc.total:-1)-(a.sc?a.sc.total:-1)))[0];
     if(!f.publiable) return '<div class="sansphoto">Photo non publiée : une personne ou une plaque y est reconnaissable.</div>';
     const n=new Set(s.flux.filter(x=>x.photo).map(x=>x.photo)).size;
