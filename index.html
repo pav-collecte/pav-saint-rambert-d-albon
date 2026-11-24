@@ -510,6 +510,8 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 
 <!-- Points pré-remplis depuis une carte : ils n'entrent dans la tournée qu'une
 fois confirmés sur place par un agent. Masqué quand il n'y en a pas. -->
+<style>.nv-b{display:block;width:100%;padding:12px;border-radius:12px;border:2px dashed currentColor;background:transparent;color:inherit;font:inherit;font-weight:600;cursor:pointer}.nv-i{margin:.5em 0 0;font-weight:600}</style>
+<div class="averif" id="nouv" hidden></div>
 <div class="averif" id="averif" hidden>
 <div class="av-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><path d="m9 10 2 2 4-4"/></svg><span id="averif-t"></span></div>
 <p class="av-s" id="averif-s"></p>
@@ -2003,7 +2005,7 @@ async function verifierRole() {
     const r = await fetch(url, { method: "POST", body: fd });
     let j = null; try { j = await r.json(); } catch {}
     if (r.status === 401 || r.status === 403) ADMIN = { code: CODE, admin: false };
-    else if (r.ok && j && j.ok) ADMIN = { code: CODE, admin: !!j.admin, nom: j.nom || "" };
+    else if (r.ok && j && j.ok) ADMIN = { code: CODE, admin: !!j.admin, nom: j.nom || "", init: j.initialisation !== false };
     else return;
     try { localStorage.setItem("pav-admin", JSON.stringify(ADMIN)); } catch {}
     rendreAVerifier(true);
@@ -2213,6 +2215,104 @@ suite de rendre(), appelée à chaque nouvelle position. */
 const rendreTournee = rendre;
 rendre = function () { rendreTournee.apply(this, arguments); rendreAVerifier(false); };
 rendreAVerifier(true);
+
+/* Nouveau point créé sur place par un administrateur, seulement pendant
+   l'initialisation (avant clôture : inclus au forfait). Après la clôture, un
+   nouveau point passe par la mairie (devis, accord du maire) et la console. */
+const NOUV = { ouvert: false, envoi: false, u: {}, info: "" };
+function fluxNouveau() {
+  const f = new Set();
+  for (const s of SITES) for (const k of Object.keys((s && s.postes) || {})) f.add(k);
+  return f.size ? [...f] : ["ordures_menageres", "emballages", "verre", "papier"];
+}
+const nvDire = t => { const m = $("nv-msg"); if (m) m.textContent = t; };
+function rendreNouveau() {
+  const box = $("nouv"); if (!box) return;
+  const ok = estAdmin() && ADMIN.init !== false;
+  box.hidden = !ok;
+  if (!ok) { NOUV.ouvert = false; box.dataset.etat = ""; return; }
+  const etat = NOUV.ouvert ? "o" : "f" + NOUV.info;
+  if (box.dataset.etat === etat) return;
+  box.dataset.etat = etat;
+  if (!NOUV.ouvert) {
+    box.innerHTML = `<button type="button" class="nv-b" data-nv="ouvrir">+ Nouveau point ici</button>`
+      + (NOUV.info ? `<p class="nv-i">${esc(NOUV.info)}</p>` : `<p class="av-s">Initialisation : crée un point de collecte là où tu te trouves.</p>`);
+    return;
+  }
+  box.innerHTML = `<div class="av-f"><label class="av-l" for="nv-nom">Nom du point (rue, place, quartier…)</label><input class="av-nom" id="nv-nom" type="text" maxlength="60" autocomplete="off"><span class="av-l">Conteneurs présents</span>`
+    + fluxNouveau().map(f => `<div class="av-n"><span>${esc(nomFlux(f))}</span>`
+      + `<button type="button" data-nm="${esc(f)}" aria-label="Un conteneur ${esc(nomFlux(f))} de moins">−</button>`
+      + `<output data-nn="${esc(f)}">${NOUV.u[f] || 0}</output>`
+      + `<button type="button" data-np="${esc(f)}" aria-label="Un conteneur ${esc(nomFlux(f))} de plus">+</button></div>`).join("")
+    + `<p class="av-d" id="nv-msg">La position enregistrée sera celle du téléphone : place-toi devant les conteneurs.</p>`
+    + `<button type="button" class="av-ok" data-nv="creer">Créer ce point ici</button>`
+    + `<button type="button" class="av-ko" data-nv="annuler">Annuler</button></div>`;
+}
+function positionPrecise() {
+  return new Promise(res => {
+    if (!navigator.geolocation) return res(null);
+    navigator.geolocation.getCurrentPosition(
+      p => res({ lat: p.coords.latitude, lon: p.coords.longitude, precision_m: Math.round(p.coords.accuracy) }),
+      () => res(null), { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 });
+  });
+}
+async function creerNouveau() {
+  if (NOUV.envoi) return;
+  const url = urlTerrain();
+  if (!url) { nvDire("Aucun serveur configuré : impossible de créer un point depuis ce téléphone."); return; }
+  if (!CODE) { ouvrirCode("Saisis ton code d'accès pour créer un point."); return; }
+  if (!navigator.onLine) { nvDire("Pas de réseau : réessaie quand le téléphone capte."); return; }
+  const nom = String(($("nv-nom") || {}).value || "").replace(/[<>]/g, "").trim().slice(0, 60);
+  if (!nom) { nvDire("Indique un nom pour ce point."); return; }
+  const u = {};
+  for (const [f, n] of Object.entries(NOUV.u)) if (n > 0) u[f] = n;
+  if (!Object.keys(u).length) { nvDire("Indique au moins un conteneur."); return; }
+  NOUV.envoi = true;
+  try {
+    nvDire("Lecture de la position GPS…");
+    const pos = await positionPrecise();
+    if (!pos) { nvDire("Position GPS indisponible : réessaie dans un instant."); return; }
+    if (pos.precision_m > 50) { nvDire(`Signal GPS trop imprécis (±${pos.precision_m} m) : mets-toi à découvert et réessaie.`); return; }
+    let proche = null;
+    try { proche = SITES.map(s => ({ s, d: Math.round(distance(pos, s)) })).filter(x => isFinite(x.d)).sort((a, b) => a.d - b.d)[0]; } catch {}
+    if (proche && proche.d < 20 && !confirm(`« ${proche.s.nom} » est déjà à ${proche.d} m d'ici.\n\nCréer quand même un nouveau point ?`)) { nvDire(""); return; }
+    const fd = new FormData();
+    fd.append("code", CODE);
+    fd.append("commune", (CONF.commune && CONF.commune.nom) || "");
+    fd.append("action", "creer");
+    fd.append("site_code", "");
+    fd.append("nom", nom);
+    fd.append("lat", pos.lat); fd.append("lon", pos.lon); fd.append("precision_m", pos.precision_m);
+    fd.append("unites", JSON.stringify(u));
+    nvDire("Envoi…");
+    const r = await fetch(url, { method: "POST", body: fd });
+    let j = null; try { j = await r.json(); } catch {}
+    const code = j && (j.site_code || j.code);
+    if (!r.ok || !j || !j.ok || !code) { nvDire((j && j.motif) || `Le serveur a répondu ${r.status} : réessaie plus tard.`); return; }
+    NOUV.ouvert = false; NOUV.u = {};
+    NOUV.info = `${j.nom || nom} (${code}) est créé et ajouté à la tournée : tu peux le photographier dès maintenant.`;
+    retenirValide(code, { code, nom: j.nom || nom, lat: pos.lat, lon: pos.lon, postes: u });
+    rendreNouveau();
+  } catch { nvDire("Réseau indisponible : réessaie dans un instant."); }
+  finally { NOUV.envoi = false; }
+}
+$("nouv").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const np = b.dataset.np, nm = b.dataset.nm, nv = b.dataset.nv;
+  if (np || nm) {
+    const f = np || nm;
+    NOUV.u[f] = Math.max(0, Math.min(20, (NOUV.u[f] || 0) + (np ? 1 : -1)));
+    for (const o of $("nouv").querySelectorAll("output[data-nn]")) if (o.dataset.nn === f) o.textContent = NOUV.u[f];
+    return;
+  }
+  if (nv === "ouvrir") { NOUV.ouvert = true; NOUV.info = ""; rendreNouveau(); const i = $("nv-nom"); if (i) i.focus(); return; }
+  if (nv === "annuler") { NOUV.ouvert = false; NOUV.u = {}; rendreNouveau(); return; }
+  if (nv === "creer") creerNouveau();
+});
+/* Le bloc suit les mêmes rafraîchissements que « Points à vérifier » (rôle, GPS…). */
+const rendreAVerifierBase = rendreAVerifier;
+rendreAVerifier = function (force) { rendreAVerifierBase(force); try { rendreNouveau(); } catch {} };
+rendreNouveau();
 </script>
 
 <script type="module">
