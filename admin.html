@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#E8EAE6">
+<meta name="robots" content="noindex">
+<title>Agents — Tournée PAV</title>
+<link rel="icon" href="favicon.png" sizes="32x32" type="image/png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Gestion des agents de la commune (onglet Releveurs), réservée aux codes
+   « administrateur terrain ». Même serveur que la validation des points. */
+:root {
+  --bg: #E8EAE6; --surface: #FFFFFF; --ink: #1A1F1C; --muted: #6A716B;
+  --line: #CFD4CD; --signal: #E8B000; --signal-ink: #2A2000;
+  --ok: #2E7D4F; --warn: #C97A14; --alert: #B3382C;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #141714; --surface: #1E221F; --ink: #E9EDE8; --muted: #9AA39B;
+  --line: #30362F; --signal: #F2C230; --signal-ink: #241B00;
+  --ok: #5FBE85; --warn: #E8A94A; --alert: #E8766A; color-scheme: dark;
+} }
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.45 Barlow, system-ui, sans-serif; }
+main { max-width: 480px; margin: 0 auto; padding: 12px 14px 40px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0 12px; }
+header a { color: var(--ink); text-decoration: none; font-weight: 600; }
+h1 { font: 600 22px/1.2 "Barlow Condensed", sans-serif; letter-spacing: .02em; margin: 0; }
+.sous { color: var(--muted); margin: 2px 0 0; font-size: 14px; }
+.carte { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin: 12px 0; }
+.carte h2 { font: 600 13px/1.2 "Barlow Condensed", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+label { display: block; font-size: 13px; color: var(--muted); margin: 8px 0 4px; }
+input, select { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+button { font: inherit; font-weight: 600; cursor: pointer; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); padding: 10px 12px; }
+button:disabled { opacity: .5; cursor: default; }
+.principal { width: 100%; margin-top: 12px; background: var(--ok); border-color: var(--ok); color: #fff; padding: 12px; }
+.msg { min-height: 1.2em; margin: 8px 0 0; font-size: 14px; color: var(--muted); }
+.msg.err { color: var(--alert); }
+.agent { border-top: 1px solid var(--line); padding: 10px 0; }
+.agent:first-child { border-top: 0; padding-top: 0; }
+.agent .l1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.agent .nom { font-weight: 600; flex: 1; min-width: 40%; }
+.badge { font: 500 12px/1 "Barlow Condensed", sans-serif; letter-spacing: .06em; text-transform: uppercase; padding: 4px 7px; border-radius: 6px; border: 1px solid var(--line); color: var(--muted); }
+.badge.admin { background: var(--signal); border-color: var(--signal); color: var(--signal-ink); }
+.badge.off { background: var(--alert); border-color: var(--alert); color: #fff; }
+.agent.inactif .nom { color: var(--muted); text-decoration: line-through; }
+.code { font: 500 14px/1.3 "IBM Plex Mono", monospace; color: var(--muted); margin-top: 4px; display: flex; gap: 8px; align-items: center; }
+.code button { padding: 3px 8px; font-size: 13px; font-weight: 500; }
+.actions { display: flex; gap: 8px; margin-top: 8px; }
+.actions button { flex: 1; font-size: 14px; padding: 8px; }
+.nouveau { background: var(--bg); border: 2px solid var(--ok); border-radius: 12px; padding: 12px; margin-top: 12px; }
+.nouveau .gros { font: 500 26px/1.2 "IBM Plex Mono", monospace; letter-spacing: .06em; margin: 6px 0; word-break: break-all; }
+.nouveau .actions button { background: var(--surface); }
+.vide { color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div><h1>Agents de la commune</h1><p class="sous" id="commune">…</p></div>
+  <a href="./" aria-label="Retour à la tournée">← Tournée</a>
+</header>
+
+<section class="carte" id="acces" hidden>
+  <h2>Code d'accès administrateur</h2>
+  <label for="code">Ton code (le même que pour la tournée)</label>
+  <input id="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC-XXXXXX">
+  <button type="button" class="principal" id="code-ok">Continuer</button>
+  <p class="msg" id="acces-msg"></p>
+</section>
+
+<section class="carte" id="ajout" hidden>
+  <h2>Ajouter un agent</h2>
+  <label for="a-nom">Nom de l'agent</label>
+  <input id="a-nom" maxlength="40" autocomplete="off" placeholder="ex. Martin">
+  <label for="a-role">Rôle</label>
+  <select id="a-role">
+    <option value="agent" selected>Agent — photographie les points</option>
+    <option value="admin">Administrateur — gère les points et les agents</option>
+  </select>
+  <button type="button" class="principal" id="a-ok">Créer son code d'accès</button>
+  <p class="msg" id="ajout-msg"></p>
+  <div id="a-res"></div>
+</section>
+
+<section class="carte" id="liste-c" hidden>
+  <h2>Agents</h2>
+  <div id="liste"><p class="vide">Chargement…</p></div>
+  <p class="msg" id="liste-msg"></p>
+</section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let CONF = {}, URL_TERRAIN = null, CODE = "", AGENTS = [], ENVOI = false;
+try { CODE = localStorage.getItem("pav-code") || ""; } catch {}
+
+function dire(id, t, err) { const m = $(id); if (!m) return; m.textContent = t || ""; m.classList.toggle("err", !!err); }
+
+async function chargerConfig() {
+  try { CONF = await fetch("config.json", { cache: "no-cache" }).then(r => r.ok ? r.json() : {}); } catch { CONF = {}; }
+  const d = CONF.depot || {};
+  URL_TERRAIN = d.terrain || (d.endpoint ? String(d.endpoint).replace(/pav-photo(\/?)$/, "pav-terrain$1") : null);
+  $("commune").textContent = (CONF.commune && CONF.commune.nom) || "";
+}
+
+async function appeler(action, champs) {
+  if (!URL_TERRAIN) throw new Error("Aucun serveur configuré pour cette commune.");
+  if (!navigator.onLine) throw new Error("Pas de réseau : réessaie quand le téléphone capte.");
+  const fd = new FormData();
+  fd.append("code", CODE);
+  fd.append("commune", (CONF.commune && CONF.commune.nom) || "");
+  fd.append("action", action);
+  for (const [k, v] of Object.entries(champs || {})) fd.append(k, v);
+  const r = await fetch(URL_TERRAIN, { method: "POST", body: fd });
+  let j = null; try { j = await r.json(); } catch {}
+  if (r.status === 401 || r.status === 403) { const e = new Error("Code refusé : il doit être un code administrateur actif de la commune."); e.acces = true; throw e; }
+  if (!r.ok || !j || !j.ok) throw new Error((j && j.motif) || `Le serveur a répondu ${r.status} : réessaie plus tard.`);
+  return j;
+}
+
+function rendreListe() {
+  const box = $("liste");
+  if (!AGENTS.length) { box.innerHTML = `<p class="vide">Aucun agent pour l'instant.</p>`; return; }
+  box.innerHTML = AGENTS.map(a => {
+    const moi = a.code === CODE;
+    return `<div class="agent${a.actif ? "" : " inactif"}">`
+      + `<div class="l1"><span class="nom">${esc(a.nom || "(sans nom)")}${moi ? " (toi)" : ""}</span>`
+      + (a.role === "admin" ? `<span class="badge admin">Admin</span>` : `<span class="badge">Agent</span>`)
+      + (a.actif ? "" : `<span class="badge off">Désactivé</span>`) + `</div>`
+      + `<div class="code"><span data-code="${esc(a.code)}">${esc(a.code.slice(0, a.code.indexOf("-") + 1))}••••••</span>`
+      + `<button type="button" data-voir="${esc(a.code)}">Afficher</button></div>`
+      + (moi ? "" : `<div class="actions">`
+        + `<button type="button" data-actif="${esc(a.code)}" data-v="${a.actif ? "non" : "oui"}">${a.actif ? "Désactiver" : "Réactiver"}</button>`
+        + `<button type="button" data-role="${esc(a.code)}" data-v="${a.role === "admin" ? "agent" : "admin"}">${a.role === "admin" ? "Passer agent" : "Passer admin"}</button>`
+        + `</div>`)
+      + `</div>`;
+  }).join("");
+}
+
+function montrerAcces(t) {
+  $("acces").hidden = false; $("ajout").hidden = true; $("liste-c").hidden = true;
+  $("code").value = CODE; dire("acces-msg", t || "", !!t);
+}
+
+async function charger() {
+  if (!CODE) { montrerAcces(""); return; }
+  $("liste-c").hidden = false;
+  dire("liste-msg", "");
+  try {
+    const j = await appeler("agents_liste");
+    AGENTS = j.agents || [];
+    $("acces").hidden = true; $("ajout").hidden = false;
+    rendreListe();
+  } catch (e) {
+    if (e.acces) montrerAcces(e.message);
+    else { $("liste").innerHTML = ""; dire("liste-msg", e.message, true); }
+  }
+}
+
+$("code-ok").addEventListener("click", () => {
+  const v = $("code").value.trim().toUpperCase();
+  if (!v) { dire("acces-msg", "Saisis ton code.", true); return; }
+  CODE = v;
+  try { if (!localStorage.getItem("pav-code")) localStorage.setItem("pav-code", v); } catch {}
+  charger();
+});
+
+$("a-ok").addEventListener("click", async () => {
+  if (ENVOI) return;
+  const nom = $("a-nom").value.trim();
+  if (!nom) { dire("ajout-msg", "Indique le nom de l'agent.", true); return; }
+  ENVOI = true; $("a-ok").disabled = true; dire("ajout-msg", "Création…");
+  try {
+    const j = await appeler("agent_ajouter", { nom, role: $("a-role").value });
+    AGENTS = j.agents || AGENTS; rendreListe();
+    const n = j.nouveau || {};
+    const appli = (CONF.adresses && CONF.adresses.application) || location.href.replace(/admin\.html.*$/, "");
+    $("a-nom").value = ""; $("a-role").value = "agent";
+    dire("ajout-msg", "");
+    $("a-res").innerHTML = `<div class="nouveau"><div>Code d'accès de <b>${esc(n.nom || nom)}</b>${n.role === "admin" ? " (administrateur)" : ""} :</div>`
+      + `<div class="gros">${esc(n.code || "")}</div>`
+      + `<div class="sous">À lui remettre en main propre, avec l'adresse de l'appli : ${esc(appli)}</div>`
+      + `<div class="actions"><button type="button" id="r-copier">Copier</button>`
+      + (navigator.share ? `<button type="button" id="r-partager">Envoyer…</button>` : "") + `</div></div>`;
+    const texte = `Tournée PAV ${(CONF.commune && CONF.commune.nom) || ""} — ton code d'accès : ${n.code}\nAppli : ${appli}`;
+    $("r-copier").onclick = async () => { try { await navigator.clipboard.writeText(texte); $("r-copier").textContent = "Copié"; } catch { $("r-copier").textContent = "Copie impossible"; } };
+    if ($("r-partager")) $("r-partager").onclick = () => navigator.share({ title: "Code d'accès tournée PAV", text: texte }).catch(() => {});
+  } catch (e) {
+    if (e.acces) montrerAcces(e.message); else dire("ajout-msg", e.message, true);
+  } finally { ENVOI = false; $("a-ok").disabled = false; }
+});
+
+$("liste").addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.voir) {
+    const s = $("liste").querySelector(`span[data-code="${CSS.escape(b.dataset.voir)}"]`);
+    const ouvert = b.textContent === "Masquer";
+    if (s) s.textContent = ouvert ? b.dataset.voir.slice(0, b.dataset.voir.indexOf("-") + 1) + "••••••" : b.dataset.voir;
+    b.textContent = ouvert ? "Afficher" : "Masquer";
+    return;
+  }
+  const cible = b.dataset.actif || b.dataset.role; if (!cible || ENVOI) return;
+  const a = AGENTS.find(x => x.code === cible); if (!a) return;
+  const champs = { cible };
+  let question;
+  if (b.dataset.actif) {
+    champs.actif = b.dataset.v;
+    question = b.dataset.v === "non" ? `Désactiver ${a.nom} ?\n\nSon code ne fonctionnera plus (photos refusées). Tu pourras le réactiver.` : `Réactiver ${a.nom} ?`;
+  } else {
+    champs.role = b.dataset.v;
+    question = b.dataset.v === "admin" ? `Passer ${a.nom} administrateur ?\n\nIl pourra valider et créer des points, et gérer les agents.` : `Retirer le rôle administrateur à ${a.nom} ?`;
+  }
+  if (!confirm(question)) return;
+  ENVOI = true; dire("liste-msg", "Enregistrement…");
+  try {
+    const j = await appeler("agent_modifier", champs);
+    AGENTS = j.agents || AGENTS; rendreListe(); dire("liste-msg", "Enregistré.");
+  } catch (er) {
+    if (er.acces) montrerAcces(er.message); else dire("liste-msg", er.message, true);
+  } finally { ENVOI = false; }
+});
+
+chargerConfig().then(charger);
+</script>
+</body>
+</html>
