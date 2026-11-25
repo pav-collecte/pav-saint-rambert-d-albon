@@ -244,6 +244,24 @@ details[open] summary{margin-bottom:8px}
   </div>
 </header>
 
+<!-- Encart global de la commune (le même que sur le site de la mairie, sans la liste) : la note d'ensemble d'abord, le détail point par point ensuite. -->
+<section id="global-commune">
+  <div class="sechead">
+    <h2>La commune en un coup d'œil</h2>
+    <p>Bac-Score global de la commune ; le détail point par point suit.</p>
+  </div>
+  <iframe id="encart-global" src="widget.html?page=1" title="Bac-Score global de la commune" scrolling="no"
+    style="width:100%;height:150px;border:1px solid var(--line);border-radius:12px;display:block;background:#fff"></iframe>
+  <script>
+    (function () {
+      var f = document.getElementById("encart-global");
+      function ajuster() { try { var d = f.contentDocument; if (d && d.body) f.style.height = Math.max(90, d.documentElement.scrollHeight) + "px"; } catch (e) {} }
+      f.addEventListener("load", function () { ajuster(); setTimeout(ajuster, 600); setTimeout(ajuster, 2000); });
+      window.addEventListener("resize", ajuster);
+    })();
+  </script>
+</section>
+
 <section>
   <div class="sechead">
     <h2>État des îlots</h2>

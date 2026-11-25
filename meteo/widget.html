@@ -40,6 +40,10 @@
   color-scheme: dark;
 } }
 html, body { height: 100%; margin: 0; }
+/* ?page=1 : encart repris en tête de la page détaillée — seulement la note globale, hauteur libre. */
+.dans-page, .dans-page body { height: auto; }
+.dans-page body { overflow: visible; }
+.dans-page .pts, .dans-page .ft { display: none; }
 body {
   background: var(--bg); color: var(--ink);
   font-family: var(--font-ui); font-size: 15px; line-height: 1.4;
@@ -125,6 +129,7 @@ let PAGE = new URL(".", location.href).href;
 
 const theme = new URLSearchParams(location.search).get("theme");
 if (theme === "dark" || theme === "auto") document.documentElement.dataset.theme = theme;
+if (new URLSearchParams(location.search).has("page")) document.documentElement.classList.add("dans-page");
 
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const dateFR = iso => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
