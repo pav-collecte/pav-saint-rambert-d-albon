@@ -459,16 +459,18 @@ export function passagesParSite(REF,obs){
     lots.forEach(lot=>{
       const parFlux={};
       lot.obs.forEach(o=>{const p=parFlux[o.flux]; if(!p||new Date(o.ts)>new Date(p.ts)) parFlux[o.flux]=o});
-      let pts=null,pire=null,depot=false;
+      let pts=null,pire=null,depot=false,crit=null;
       Object.values(parFlux).forEach(o=>{
         if(o.depotSol) depot=true;
         if(o.vues===0 && !o.inaccessible) return;
         const ref=unitesRef(REF,o.site,o.flux,obs);
         
-        const total=sous(o.ts,()=>ptsProprete(o.sacs,o.depotSol)+ptsRemplissage(o,ref)+ptsRecidive(nPassagesAvecDepot(o.site,o.flux,new Date(o.ts).getTime(),obs)));
-        if(pts===null||total>pts){pts=total; pire=o;}
+        // Détail par critère (pr, re, rc) gardé pour les statistiques de la page détaillée.
+        const c=sous(o.ts,()=>({pr:ptsProprete(o.sacs,o.depotSol),re:ptsRemplissage(o,ref),rc:ptsRecidive(nPassagesAvecDepot(o.site,o.flux,new Date(o.ts).getTime(),obs))}));
+        const total=c.pr+c.re+c.rc;
+        if(pts===null||total>pts){pts=total; pire=o; crit=c;}
       });
-      lot.pts=pts; lot.L=pts===null?null:sous(pire.ts,()=>lettre(pts)); lot.bar=pire?versionDu(pire.ts):null; lot.depot=depot;
+      lot.pts=pts; lot.L=pts===null?null:sous(pire.ts,()=>lettre(pts)); lot.bar=pire?versionDu(pire.ts):null; lot.depot=depot; lot.crit=crit;
       lot.photo=(pire||lot.obs[0]).photo;
     });
     sites[code].lots=lots;

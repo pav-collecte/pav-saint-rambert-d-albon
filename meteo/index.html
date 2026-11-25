@@ -147,6 +147,42 @@ button.fr-cell{appearance:none;background:none;border:0;padding:0;font:inherit;c
 .fd-ph figure{margin:0;flex:0 0 auto;width:220px}
 .fd-ph img{width:220px;height:165px;object-fit:cover;border-radius:8px;display:block;background:var(--surface-2)}
 .fd-ph figcaption{font-size:.72rem;color:var(--ink-3);margin-top:4px;font-family:var(--mono)}
+.pj-strip{margin:8px 0 2px}.pj-strip-t{font-size:.72rem;color:var(--ink-3);margin:0 0 6px;font-family:var(--mono)}
+.pj-strip-l{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+.pj-strip-l a{position:relative;flex:none;display:block;border-radius:7px;overflow:hidden;border:1px solid var(--line)}
+.pj-strip-l img{width:76px;height:58px;object-fit:cover;display:block}
+.pj-strip-l .pj-l{position:absolute;top:3px;left:3px}
+figure.preuve a{cursor:zoom-in}
+.pj-liste.pj2{display:block}
+.pj-liste .pj-hero{margin:0 0 12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;position:relative}
+.pj-liste .pj-hero img{width:100%;height:auto;max-height:min(62vh,520px);object-fit:cover;display:block;background:var(--surface-2)}
+.pj-liste .pj-hero figcaption{padding:10px 12px;font-size:.88rem;line-height:1.45}
+.pj-txt{display:block;margin-top:6px;color:var(--ink-2);font-style:italic}
+.pj-vigs{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:8px}
+.pj-liste .pj-v{margin:0;position:relative;background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.pj-liste .pj-v img{width:100%;height:92px;object-fit:cover;display:block}
+.pj-liste .pj-v .pj-np{height:92px;font-size:.7rem;padding:6px}
+.pj-liste .pj-v figcaption{padding:4px 6px;font-size:.68rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pj-zoom{position:fixed;inset:0;z-index:100;background:rgba(10,12,11,.93);display:flex;align-items:center;justify-content:center;padding:12px}
+.pj-zoom figure{margin:0;max-width:min(1100px,100%);display:flex;flex-direction:column}
+.pj-zoom img{max-width:100%;max-height:calc(100vh - 170px);object-fit:contain;border-radius:8px;margin:0 auto}
+.pj-zoom figcaption{color:#eee;font-size:.88rem;padding:10px 4px 0;line-height:1.45}
+.pj-zoom .pj-txt{color:#cfd6d2}.pj-zoom .pj-l{position:static;display:inline-grid;vertical-align:middle}
+.pz-c{display:block;margin-top:4px;color:#9aa5a0;font-size:.75rem}
+.pz-x,.pz-p,.pz-n{position:absolute;z-index:1;border:0;background:rgba(255,255,255,.16);color:#fff;border-radius:50%;width:46px;height:46px;font-size:28px;line-height:1;cursor:pointer}
+.pz-x{top:12px;right:12px}.pz-p{left:10px;top:50%;transform:translateY(-50%)}.pz-n{right:10px;top:50%;transform:translateY(-50%)}
+/* Photos du jour (avis AV-MWW2UCSW-3) */
+.pj-tri{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.pj-tri button{appearance:none;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:999px;padding:7px 14px;font:600 .84rem var(--font)}
+.pj-tri button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.pj-liste{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.pj-liste figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;position:relative}
+.pj-liste img{width:100%;height:150px;object-fit:cover;display:block;background:var(--surface-2)}
+.pj-liste .pj-np{height:150px;display:grid;place-items:center;padding:12px;text-align:center;font-size:.78rem;color:var(--ink-3);background:var(--surface-2)}
+.pj-liste figcaption{padding:7px 9px 9px;font-size:.78rem;color:var(--ink-2);line-height:1.35}
+.pj-liste figcaption b{display:block;color:var(--ink);font-size:.84rem}
+.pj-l{position:absolute;top:8px;left:8px;min-width:28px;height:28px;padding:0 6px;border-radius:7px;display:grid;place-items:center;color:#fff;font:700 .95rem var(--mono);box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.pj-vide{color:var(--ink-3);font-size:.88rem}
 .fd-np{width:220px;height:165px;border-radius:8px;display:grid;place-items:center;text-align:center;padding:14px;font-size:.78rem;color:var(--ink-3);background:var(--surface-2)}
 .fd-v{font-size:.8rem;color:var(--ink-3);margin:10px 0}
 .fd-f{list-style:none;margin:0;padding:0;display:grid;gap:9px}
@@ -205,7 +241,35 @@ button.fr-cell{appearance:none;background:none;border:0;padding:0;font:inherit;c
 .tile.alert{border-color:var(--crit);background:var(--crit-bg)}
 .tile.alert .v,.tile.alert .k,.tile.alert .n{color:var(--crit)}
 
+.al-box{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.al{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;border:1px solid;font-size:.88rem;line-height:1.45}
+.al.rouge{background:#FDECEA;border-color:#F2B8B5;color:#7A1C14}
+.al-l{color:inherit;font-weight:600;text-decoration:none}
+.al-l::after{content:" ›";font-weight:700}
+.al{cursor:pointer}
+.al:hover{filter:brightness(.97)}
+@keyframes alFlash{0%,60%{box-shadow:0 0 0 4px #E08A00}100%{box-shadow:none}}
+article.site.al-flash{animation:alFlash 2.2s ease-out}
+.al.orange{background:#FFF4E5;border-color:#F5CF99;color:#6B4200}
 .bars{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:12px}
+/* Statistiques détaillées (graphes) */
+.st-choix{display:flex;gap:8px;align-items:center;margin:0 0 12px;font-size:.86rem;color:var(--ink-2)}
+.st-choix select{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);max-width:100%}
+.st-carte{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:12px;min-width:0}
+.st-ligne{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.st-t{font-size:.86rem;font-weight:600;color:var(--ink);margin-bottom:10px}
+.st-svg{width:100%;height:auto;display:block}
+.st-grid{stroke:var(--line);stroke-width:1}
+.st-ax{font:11px var(--mono, monospace);fill:var(--ink-3)}
+.st-n{font:10px var(--mono, monospace);fill:var(--ink-2)}
+.st-donut{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.st-dc{font:700 24px system-ui;fill:var(--ink)} .st-ds{font:11px system-ui;fill:var(--ink-3)}
+.st-leg{list-style:none;margin:0;padding:0;font-size:.8rem;color:var(--ink-2);display:flex;flex-direction:column;gap:4px}
+.st-leg li i,.st-leg span i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.st-leg li span{color:var(--ink-3)}
+.st-leg-h{flex-direction:row;flex-wrap:wrap;gap:12px;margin-top:8px}
+.st-note{font-size:.76rem;color:var(--ink-3);margin:8px 0 0}
+.st-vide{font-size:.84rem;color:var(--ink-3)}
 .bar{display:grid;grid-template-columns:132px 1fr 42px;gap:10px;align-items:center;margin-top:9px;font-size:.8rem}
 .bar:first-of-type{margin-top:0}
 .bar .track{background:var(--surface-2);border-radius:3px;height:12px;overflow:hidden}
@@ -252,6 +316,7 @@ details[open] summary{margin-bottom:8px}
   </div>
   <iframe id="encart-global" src="widget.html?page=1" title="Bac-Score global de la commune" scrolling="no"
     style="width:100%;height:150px;border:1px solid var(--line);border-radius:12px;display:block;background:#fff"></iframe>
+  <div id="alertes-commune" class="al-box" hidden></div>
   <script>
     (function () {
       var f = document.getElementById("encart-global");
@@ -262,6 +327,18 @@ details[open] summary{margin-bottom:8px}
   </script>
 </section>
 
+<section id="photos-jour" hidden>
+<div class="sechead">
+<h2 id="pj-titre">Photos du jour</h2>
+<p id="pj-intro">Toutes les photos du dernier jour de relevé, avec la note du passage.</p>
+</div>
+<div class="pj-tri" role="group" aria-label="Trier les photos">
+<button type="button" data-tri="date" aria-pressed="true">Les plus récentes</button>
+<button type="button" data-tri="note" aria-pressed="false">Les plus mauvaises notes</button>
+</div>
+<div class="pj-liste" id="pj-liste"></div>
+</section>
+
 <section>
   <div class="sechead">
     <h2>État des îlots</h2>
@@ -269,6 +346,8 @@ details[open] summary{margin-bottom:8px}
   </div>
   <div class="grid" id="sites"></div>
 </section>
+
+
 
 <section>
   <div class="sechead">
@@ -310,9 +389,12 @@ details[open] summary{margin-bottom:8px}
 <section>
   <div class="sechead">
     <h2>Statistiques d'exploitation</h2>
-    <p>Ce que disent les passages sur la période couverte par les relevés.</p>
+    <p>La commune dans son ensemble, puis îlot par îlot : choisissez un îlot dans la liste.</p>
   </div>
-  <div class="tiles" id="tiles"></div>
+  <div class="st-choix"><label for="st-choix">Graphes pour :</label><select id="st-choix"></select></div>
+  <div class="st-carte" id="st-mois"></div>
+  <div class="st-ligne"><div class="st-carte" id="st-lettres"></div><div class="st-carte" id="st-crit"></div></div>
+  <div class="tiles" id="tiles" style="margin-top:12px"></div>
   <div class="bars" id="bars"></div>
 </section>
 
@@ -354,6 +436,7 @@ import {LETTRES, FLUX_LABEL, dateFR, jours, normaliser, appliquerBareme, decrire
 import {chargerConfig, chargerBareme, urlPhoto, urlVignette, libelleCommune} from './config.js';
 
 let REF=[], OBS=[];
+let JOURS_ALERTE=7;   // alerte « relevé en retard » ; config.json : alertes.joursSansReleve
 const calcule=obs=>calculeAvec(REF,obs);
 const passagesParSite=obs=>passagesAvec(REF,obs);
 
@@ -416,6 +499,24 @@ function rendu(){
     return a.site.localeCompare(b.site);
   };
   const sites=calcule(obs).sort(parFraicheur);
+
+  /* Alertes du « coup d'œil » : îlots en D ou E, et îlots sans relevé depuis plus de JOURS_ALERTE jours. */
+  (function(){
+    const box=document.getElementById('alertes-commune'); if(!box) return;
+    const tri=c=>'<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" style="flex:none"><path d="M12 2.5 1.5 21h21L12 2.5z" fill="'+c+'"/><path d="M12 9.5v5M12 17.6v.2" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>';
+    const noirs=sites.filter(s=>s.L&&(s.L.l==='D'||s.L.l==='E'));
+    const retard=sites.filter(s=>!s.dernier||jours(s.dernier)>JOURS_ALERTE).sort((a,b)=>(a.dernier||'').localeCompare(b.dernier||''));
+    let h='';
+    if(noirs.length) h+='<div class="al rouge" role="alert">'+tri('#B3261E')+'<div><b>'+noirs.length+' point'+(noirs.length>1?'s':'')+' noir'+(noirs.length>1?'s':'')+' (Bac-Score D ou E)</b><br>'
+      +noirs.map(s=>'<a href="#" class="al-l" data-al="'+esc(s.site)+'">'+esc(s.site+' — '+s.nom)+'</a>'+' : <b>'+s.L.l+'</b> '+esc(s.L.lab.toLowerCase())).join(' · ')+'</div></div>';
+    if(retard.length) h+='<div class="al orange" role="alert">'+tri('#E08A00')+'<div><b>Relevés en retard : '+retard.length+' îlot'+(retard.length>1?'s':'')+' sans photo depuis plus de '+JOURS_ALERTE+' jours</b><br>'
+      +retard.map(s=>'<a href="#" class="al-l" data-al="'+esc(s.site)+'">'+esc(s.site+' — '+s.nom)+'</a>'+' : '+(s.dernier?'dernier il y a '+jours(s.dernier)+' jours':'jamais relevé')).join(' · ')+'</div></div>';
+    box.innerHTML=h; box.hidden=!h;
+    /* Avis AV-MWW2Z3BS-4 : un clic sur un îlot d'alerte amène à sa carte. */
+    box.onclick=e=>{ const al=e.target.closest('.al'); const l=e.target.closest('[data-al]')||(al&&al.querySelector('[data-al]')); if(!l) return; e.preventDefault();
+      const art=[...document.querySelectorAll('article.site')].find(x=>((x.querySelector('.site-code')||{}).textContent||'').includes(l.dataset.al));
+      if(!art) return; art.scrollIntoView({behavior:'smooth',block:'start'}); art.classList.remove('al-flash'); void art.offsetWidth; art.classList.add('al-flash'); };
+  })();
   /* La frise et la décomposition suivent le même ordre : trois sections qui
      classent différemment les mêmes îlots se lisent mal. */
   const ordre=new Map(sites.map((s,i)=>[s.site,i]));
@@ -450,7 +551,7 @@ function rendu(){
     if(!f.publiable) return '<div class="sansphoto">Photo non publiée : une personne ou une plaque y est reconnaissable.</div>';
     const n=new Set(s.flux.filter(x=>x.photo).map(x=>x.photo)).size;
     return '<figure class="preuve">'
-      +'<a href="'+urlPhoto(f.photo)+'" target="_blank" rel="noopener" '
+      +'<a href="'+urlVignette(f.photo,1600)+'" target="_blank" rel="noopener" '
       +'title="'+esc((FLUX_LABEL[f.flux]||f.flux)+' — '+(f.ts?dateFR(f.ts):''))+'">'
       +'<img src="'+urlVignette(f.photo,600)+'" loading="lazy" '
       +'alt="'+esc('Relevé photo de l\'îlot '+s.nom)+'" onerror="this.closest(\'figure\').remove()"></a>'
@@ -458,8 +559,84 @@ function rendu(){
       +(n>1?' · '+n+' photos ce jour-là':'')+'</figcaption></figure>';
   }
 
-  // Îlots
-  document.getElementById('sites').innerHTML = sites.map(s=>{
+  /* Photos du jour (avis AV-MWW2UCSW-3) : toutes les photos du dernier jour de
+relevé, triées par heure ou par plus mauvaise note. La note est celle du
+passage auquel la photo appartient. Une photo où une personne ou une plaque
+est reconnaissable n'est ni affichée ni liée. */
+try{ (function photosDuJour(){
+const sec=document.getElementById('photos-jour'), box=document.getElementById('pj-liste');
+if(!sec||!box) return;
+const jourDe=t=>new Date(t).toLocaleDateString('sv-SE',{timeZone:'Europe/Paris'});
+const dernier=obs.map(o=>o.ts).filter(Boolean).sort().pop();
+if(!dernier){ sec.hidden=true; return; }
+const jour=jourDe(dernier), auj=jourDe(Date.now());
+const lotDe={};
+passagesParSite(obs).forEach(s=>s.lots.forEach(l=>l.obs.forEach(o=>{ if(o.photo) lotDe[o.photo]=l; })));
+const nomDe={}; sites.forEach(s=>{ nomDe[s.site]=s.nom; });
+const ph={};
+obs.filter(o=>o.photo&&o.ts&&jourDe(o.ts)===jour).forEach(o=>{
+const p=ph[o.photo]||(ph[o.photo]={id:o.photo,site:o.site,ts:o.ts,flux:new Set(),prive:false});
+p.flux.add(FLUX_LABEL[o.flux]||o.flux);
+if(o.ts<p.ts) p.ts=o.ts;
+if(o.personneVisible||o.plaqueLisible) p.prive=true;
+});
+const liste=Object.values(ph).map(p=>{ const l=lotDe[p.id]; p.L=l&&l.L; p.pts=l&&typeof l.pts==='number'?l.pts:-1; return p; });
+document.getElementById('pj-titre').textContent=(jour===auj?"Photos du jour":"Photos du dernier relevé")+" · "+liste.length;
+document.getElementById('pj-intro').textContent=(jour===auj?"Aujourd'hui":"Le "+new Date(dernier).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}))
++" : toutes les photos, avec la note du passage.";
+let tri='date';
+/* Retour terrain : les photos vont dans la carte de chaque îlot (plus de rubrique à part).
+   Sous la photo principale, les vignettes du dernier relevé de l'îlot ; un appui ouvre une
+   visionneuse dans la page (flèches, glisser, Échap), sans aucun lien Google. */
+sec.hidden=true;
+const TXT={}; obs.forEach(o=>{ if(o.photo&&o.texte){ const t=TXT[o.photo]=TXT[o.photo]||[]; if(!t.includes(o.texte)) t.push(o.texte); } });
+const lettreDe=p=>'<span class="pj-l" style="background:'+(p.L?'var('+p.L.var+')':'var(--sOff)')+'" title="'+esc(p.L?'Bac-Score '+p.L.l+' — '+p.L.lab:'Non noté')+'">'+(p.L?p.L.l:'·')+'</span>';
+const heure=p=>new Date(p.ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+const nomP=p=>nomDe[p.site]||p.site;
+const parSite={};
+const dernierJour={}; obs.forEach(o=>{ if(o.photo&&o.ts&&o.site){ const j=jourDe(o.ts); if(!dernierJour[o.site]||j>dernierJour[o.site]) dernierJour[o.site]=j; } });
+obs.forEach(o=>{ if(!o.photo||!o.ts||!o.site||jourDe(o.ts)!==dernierJour[o.site]) return;
+const m=parSite[o.site]=parSite[o.site]||{};
+const p=m[o.photo]||(m[o.photo]={id:o.photo,site:o.site,ts:o.ts,flux:new Set(),prive:false});
+p.flux.add(FLUX_LABEL[o.flux]||o.flux); if(o.ts<p.ts) p.ts=o.ts; if(o.personneVisible||o.plaqueLisible) p.prive=true; });
+Object.keys(parSite).forEach(code=>{ parSite[code]=Object.values(parSite[code]).map(p=>{ const lt=lotDe[p.id]; p.L=lt&&lt.L; p.pts=lt&&typeof lt.pts==='number'?lt.pts:-1; return p; }).filter(p=>!p.prive).sort((x,y)=>x.ts.localeCompare(y.ts)); });
+/* Les cartes d'îlots peuvent être dessinées après ce code : on pose les vignettes quand elles sont là. */
+function poserBandeaux(){ Object.keys(parSite).forEach(code=>{ const l=parSite[code];
+const art=[...document.querySelectorAll('article.site')].find(x=>((x.querySelector('.site-code')||{}).textContent||'').includes(code));
+if(!art||!l.length||art.dataset.pjFait) return; art.dataset.pjFait='1';
+const fig=art.querySelector('figure.preuve');
+const lien=fig&&fig.querySelector('a');
+if(lien) lien.addEventListener('click',e=>{ e.preventDefault(); const im=lien.querySelector('img'); const p=l.find(q=>im&&im.src.includes(q.id))||l[l.length-1]; zoom(p.id,l); });
+if(l.length<2) return;
+const div=document.createElement('div'); div.className='pj-strip';
+const j=dernierJour[code];
+div.innerHTML='<div class="pj-strip-t">'+l.length+' photos '+(j===auj?"aujourd'hui":'le '+new Date(j+'T12:00').toLocaleDateString('fr-FR',{day:'numeric',month:'long'}))+'</div><div class="pj-strip-l">'
++l.map(p=>'<a href="#" data-zoom="'+esc(p.id)+'" data-site="'+esc(code)+'" title="'+esc(heure(p)+' · '+[...p.flux].join(', '))+'">'+lettreDe(p)+'<img src="'+urlVignette(p.id,240)+'" loading="lazy" alt="'+esc('Photo de '+nomP(p)+' à '+heure(p))+'"></a>').join('')+'</div>';
+if(fig) fig.after(div); else { const sb=art.querySelector('.scorebox'); if(sb) sb.after(div); else art.appendChild(div); }
+}); }
+poserBandeaux(); setTimeout(poserBandeaux,0); setTimeout(poserBandeaux,800);
+{ const gr=document.getElementById('sites'); if(gr) new MutationObserver(poserBandeaux).observe(gr,{childList:true}); }
+let VUE=[];
+function zoom(id,liste){
+VUE=liste||[]; let i=VUE.findIndex(p=>p.id===id); if(i<0) return;
+const f=document.createElement('div'); f.className='pj-zoom'; f.setAttribute('role','dialog'); f.setAttribute('aria-modal','true');
+const montrer=()=>{ const p=VUE[i], t=(TXT[p.id]||[]).join(' ');
+f.innerHTML='<button type="button" class="pz-x" aria-label="Fermer">×</button>'+(VUE.length>1?'<button type="button" class="pz-p" aria-label="Photo précédente">‹</button><button type="button" class="pz-n" aria-label="Photo suivante">›</button>':'')
++'<figure><img src="'+urlVignette(p.id,1600)+'" alt="'+esc('Photo de '+nomP(p))+'"><figcaption>'+lettreDe(p)+' <b>'+esc(nomP(p))+'</b> · '+esc(heure(p)+' · '+[...p.flux].join(', '))+(p.L?' · '+esc(p.L.l+' — '+p.L.lab):'')
++(t?'<span class="pj-txt">'+esc(t)+'</span>':'')+'<span class="pz-c">'+(i+1)+' / '+VUE.length+'</span></figcaption></figure>'; };
+const aller=s=>{ i=(i+s+VUE.length)%VUE.length; montrer(); };
+const kb=e=>{ if(e.key==='Escape') fermer(); else if(e.key==='ArrowLeft') aller(-1); else if(e.key==='ArrowRight') aller(1); };
+const fermer=()=>{ f.remove(); document.removeEventListener('keydown',kb); };
+f.onclick=e=>{ if(e.target.closest('.pz-x')||e.target===f) fermer(); else if(e.target.closest('.pz-p')) aller(-1); else if(e.target.closest('.pz-n')) aller(1); };
+let x0=null; f.addEventListener('touchstart',e=>{ x0=e.touches[0].clientX; },{passive:true});
+f.addEventListener('touchend',e=>{ if(x0===null) return; const dx=e.changedTouches[0].clientX-x0; if(Math.abs(dx)>50) aller(dx<0?1:-1); x0=null; });
+document.addEventListener('keydown',kb); document.body.appendChild(f); montrer();
+}
+document.addEventListener('click',e=>{ const a=e.target.closest('.pj-strip [data-zoom]'); if(!a) return; e.preventDefault(); zoom(a.dataset.zoom,parSite[a.dataset.site]); });
+})(); }catch(e){ console.warn('Photos du jour', e); } // jamais au détriment du reste de la page
+
+// Îlots
+document.getElementById('sites').innerHTML = sites.map(s=>{
     const niv = s.niveau===null?INCONNU:NIV[s.niveau];
     const vieux = s.dernier && jours(s.dernier)>7;
     return '<article class="site">'
@@ -719,6 +896,75 @@ function rendu(){
     }).join('')
     + '<div style="font-size:.74rem;color:var(--ink-3);margin-top:12px">La portion rouge indique les constats où des déchets étaient posés au sol.</div>';
 
+
+  /* ── Statistiques détaillées : commune puis îlot par îlot ──────────────────
+     Bâtons par mois (points de pénalité moyens par passage, empilés par critère),
+     camembert des Bac-Scores des passages, camembert de l'origine des pénalités. */
+  const TOUS_LOTS=passagesParSite(obs).flatMap(s=>s.lots.map(l=>Object.assign({site:s.site,nom:s.nom},l))).filter(l=>l.pts!==null);
+  const choix=document.getElementById('st-choix');
+  if(choix && !choix.dataset.init){
+    choix.dataset.init='1';
+    choix.innerHTML='<option value="">Toute la commune</option>'+sites.map(s=>'<option value="'+esc(s.site)+'">'+esc(s.site+' — '+s.nom)+'</option>').join('');
+    choix.addEventListener('change',()=>dessinerStats(choix.value));
+  }
+  function moisLib(k){ const [a,m]=k.split('-'); return new Date(+a,+m-1,1).toLocaleDateString('fr-FR',{month:'short',year:'2-digit'}); }
+  function donut(parts,centre,sous){
+    const tot=parts.reduce((a,p)=>a+p.v,0), R=70, r=44, C=90;
+    if(!tot) return '<p class="st-vide">Pas encore de données.</p>';
+    let a0=-Math.PI/2, arcs='';
+    parts.filter(p=>p.v>0).forEach(p=>{
+      const a1=a0+2*Math.PI*p.v/tot, grand=(a1-a0)>Math.PI?1:0;
+      const P=(ang,rr)=>(C+rr*Math.cos(ang)).toFixed(2)+' '+(C+rr*Math.sin(ang)).toFixed(2);
+      const d=(p.v===tot)
+        ? 'M '+P(0,R)+' A '+R+' '+R+' 0 1 1 '+P(Math.PI,R)+' A '+R+' '+R+' 0 1 1 '+P(0,R)+' M '+P(0,r)+' A '+r+' '+r+' 0 1 0 '+P(Math.PI,r)+' A '+r+' '+r+' 0 1 0 '+P(0,r)+' Z'
+        : 'M '+P(a0,R)+' A '+R+' '+R+' 0 '+grand+' 1 '+P(a1,R)+' L '+P(a1,r)+' A '+r+' '+r+' 0 '+grand+' 0 '+P(a0,r)+' Z';
+      arcs+='<path d="'+d+'" fill="'+p.c+'" fill-rule="evenodd"><title>'+esc(p.l+' : '+p.v+' ('+Math.round(100*p.v/tot)+' %)')+'</title></path>';
+      a0=a1;
+    });
+    return '<div class="st-donut"><svg viewBox="0 0 180 180" width="180" height="180" role="img" aria-label="'+esc(parts.map(p=>p.l+' '+p.v).join(', '))+'">'+arcs
+      +'<text x="90" y="88" text-anchor="middle" class="st-dc">'+esc(centre)+'</text><text x="90" y="106" text-anchor="middle" class="st-ds">'+esc(sous)+'</text></svg>'
+      +'<ul class="st-leg">'+parts.map(p=>'<li><i style="background:'+p.c+'"></i>'+esc(p.l)+' <b>'+p.v+'</b> <span>'+(tot?Math.round(100*p.v/tot):0)+' %</span></li>').join('')+'</ul></div>';
+  }
+  function dessinerStats(site){
+    const lots=TOUS_LOTS.filter(l=>!site||l.site===site);
+    const titre=site?(sites.find(s=>s.site===site)||{}).nom||site:'toute la commune';
+    const parMois={};
+    lots.forEach(l=>{ const k=String(l.fin).slice(0,7); const m=parMois[k]=parMois[k]||{n:0,dep:0,c:{}}; m.n++; if(l.depot) m.dep++;
+      COMPO.forEach(c=>{ m.c[c.k]=(m.c[c.k]||0)+((l.crit&&l.crit[c.k])||0); }); });
+    let cles=Object.keys(parMois).sort();
+    if(cles.length){
+      const tout=[]; let [a,m]=cles[0].split('-').map(Number); const [a2,m2]=cles[cles.length-1].split('-').map(Number);
+      while(a<a2||(a===a2&&m<=m2)){ tout.push(a+'-'+String(m).padStart(2,'0')); m++; if(m>12){m=1;a++;} }
+      cles=tout.slice(-12);
+    }
+    const moy=k=>{ const m=parMois[k]; return m?COMPO.map(c=>({c,v:m.c[c.k]/m.n})):[]; };
+    const maxV=Math.max(1,...cles.map(k=>moy(k).reduce((a,x)=>a+x.v,0)));
+    const W=640,H=230,G=36,B=24,bw=Math.min(56,(W-G-10)/Math.max(1,cles.length)*0.62), pas=(W-G-10)/Math.max(1,cles.length);
+    let svg='';
+    [0,maxV/2,maxV].forEach(g=>{ const y=H-B-(H-B-14)*g/maxV; svg+='<line x1="'+G+'" x2="'+(W-6)+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" class="st-grid"/><text x="'+(G-6)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end" class="st-ax">'+(Math.round(g*10)/10)+'</text>'; });
+    cles.forEach((k,i)=>{
+      const x=G+pas*i+(pas-bw)/2; let y=H-B; const m=parMois[k];
+      moy(k).forEach(({c,v})=>{ const h=(H-B-14)*v/maxV; if(h<=0) return; y-=h;
+        svg+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" fill="'+c.c+'" rx="2"><title>'+esc(moisLib(k)+' · '+c.lab+' : '+(Math.round(v*10)/10)+' pt en moyenne')+'</title></rect>'; });
+      svg+='<text x="'+(x+bw/2).toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle" class="st-ax">'+esc(moisLib(k))+'</text>'
+        +(m?'<text x="'+(x+bw/2).toFixed(1)+'" y="'+(y-4).toFixed(1)+'" text-anchor="middle" class="st-n">'+m.n+' pass.</text>':'');
+    });
+    document.getElementById('st-mois').innerHTML='<div class="st-t">Pénalités moyennes par passage, mois par mois — '+esc(titre)+'</div>'
+      +(cles.length?'<svg viewBox="0 0 '+W+' '+H+'" class="st-svg" role="img" aria-label="Points de pénalité moyens par passage et par mois">'+svg+'</svg>'
+        +'<div class="st-leg st-leg-h">'+COMPO.map(c=>'<span><i style="background:'+c.c+'"></i>'+esc(c.lab)+'</span>').join('')+'<span class="st-note">plus la barre est haute, plus le point est dégradé ; « pass. » = nombre de passages</span></div>'
+        :'<p class="st-vide">Pas encore de passage noté.</p>');
+    const parL={}; lots.forEach(l=>{ parL[l.L.l]=(parL[l.L.l]||0)+1; });
+    const moyPts=lots.length?Math.round(10*lots.reduce((a,l)=>a+l.pts,0)/lots.length)/10:0;
+    document.getElementById('st-lettres').innerHTML='<div class="st-t">Bac-Score des passages</div>'
+      +donut(BAR.echelle.map(e=>({l:e.l+' — '+e.lab,v:parL[e.l]||0,c:'var('+e.var+')'})),String(lots.length),'passages');
+    const tot={}; lots.forEach(l=>COMPO.forEach(c=>{ tot[c.k]=(tot[c.k]||0)+((l.crit&&l.crit[c.k])||0); }));
+    const dep=lots.filter(l=>l.depot).length;
+    document.getElementById('st-crit').innerHTML='<div class="st-t">Origine des points de pénalité</div>'
+      +donut(COMPO.map(c=>({l:c.lab,v:tot[c.k]||0,c:c.c})),String(moyPts),'pt / passage')
+      +'<p class="st-note">'+dep+' passage'+(dep>1?'s':'')+' sur '+lots.length+' avec un dépôt au sol ('+(lots.length?Math.round(100*dep/lots.length):0)+' %).</p>';
+  }
+  dessinerStats(choix?choix.value:'');
+
   // Barème du Bac-Score : entièrement décrit par bac-score.js
   document.getElementById('bareme').innerHTML = BAR.criteres.map(b=>
     '<div class="lane"><span class="lbl">'+esc(b.libelle)+'</span><span class="cells">'
@@ -788,6 +1034,7 @@ Promise.all([
   .then(([cfg,,d])=>{
     const n=normaliser(d);
     REF=n.REF; OBS=n.OBS;
+    if(cfg.alertes&&Number(cfg.alertes.joursSansReleve)>0) JOURS_ALERTE=Number(cfg.alertes.joursSansReleve);
     document.getElementById('m-commune').textContent=libelleCommune(n.commune,n.departement);
     /* La provenance des donnees est nommee par la commune elle-meme : la page
        ne doit pas pretendre savoir dans quel classeur elle puise. */
@@ -806,5 +1053,6 @@ Promise.all([
   <a href="integrer.html">Mettre cet encart sur le site de votre commune &rarr;</a>
 </p>
 
+<script src="../avis.js" data-page="meteo" defer></script>
 </body>
 </html>

@@ -48,7 +48,10 @@ self.addEventListener("fetch", e => {
 const DB = "pav", ST = "file", CFG = "config";
 
 const idb = () => new Promise((ok, ko) => {
-  const r = indexedDB.open(DB, 2);
+  /* Sans numéro de version : la page a fait monter la base en version 3 (magasin
+des vignettes). Ouvrir en version 2 échouait (VersionError) et l'envoi en
+arrière-plan ne partait jamais. */
+const r = indexedDB.open(DB);
   r.onupgradeneeded = () => {
     const d = r.result;
     if (!d.objectStoreNames.contains(ST))  d.createObjectStore(ST, { keyPath: "uuid" });
@@ -80,15 +83,24 @@ async function viderLaFile() {
   const code = await lire(CFG, "code");
   if (!code) return;
   const file = (await lire(ST)) || [];
+/* La commune accompagne chaque photo, comme depuis la page : n8n s'en sert
+pour ranger la photo dans le classeur de la bonne commune. */
+let commune = "";
+try {
+const rc = await fetch("./config.json", { cache: "no-cache" }).catch(() => caches.match("./config.json"));
+const c = rc ? await rc.json() : null;
+commune = (c && c.commune && (c.commune.nom || c.commune)) || "";
+} catch (e) {}
   let envoyees = 0;
   for (const it of file) {
     const fd = new FormData();
     fd.append("photo", it.photo, it.uuid + ".jpg");
-    for (const k of ["uuid", "horodatage", "site_code", "lat", "lon", "precision_m", "source", "plein", "sale"]) {
+    for (const k of ["uuid", "horodatage", "site_code", "lat", "lon", "precision_m", "source", "plein", "sale", "propre"]) {
       if (it[k] !== undefined && it[k] !== null) fd.append(k, it[k]);
     }
     fd.append("code", code);
-    const r = await fetch(endpoint, { method: "POST", body: fd });
+fd.append("commune", typeof commune === "string" ? commune : "");
+const r = await fetch(endpoint, { method: "POST", body: fd });
     // Code refusé : réessayer ne servirait à rien tant qu'il n'a pas changé.
     // On s'arrête sans relancer d'erreur, et on prévient la page si elle est
     // ouverte — sinon l'agent le découvrira à sa prochaine visite.

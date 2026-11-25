@@ -109,6 +109,11 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 /* :not(.vgs) pour peser autant que la règle de base des lignes, :not(.here)
    pour laisser le point sélectionné garder sa bordure jaune. */
 .round li.retard-p:not(.here):not(.vgs) > button { border-color: var(--warn); border-width: 1.5px; }
+/* Bascule agent / admin : visible pour les codes administrateurs seulement. */
+.mode-b { appearance: none; cursor: pointer; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink);
+border-radius: 999px; padding: 5px 11px; font-family: var(--font-label); text-transform: uppercase; letter-spacing: .05em;
+font-size: .78rem; font-weight: 600; min-height: 34px; }
+.mode-b.admin { background: #1F3A2E; border-color: #1F3A2E; color: #fff; }
 .ver { margin: 4px 0 0; text-align: center; font-family: var(--font-mono); font-size: .72rem; color: var(--muted); }
 .bar-d { display: flex; align-items: center; gap: 10px; flex: none; }
 .logo { height: 28px; width: auto; max-width: 72px; object-fit: contain; border-radius: 4px; display: block; }
@@ -145,6 +150,11 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 /* Tant qu'aucun point n'est choisi, c'est LE geste à faire : le bouton prend
    plus de place et bat doucement, pour qu'on ne cherche pas quoi toucher. */
 .shoot.choisir { padding-block: 34px; font-size: 1.35rem; animation: respire 2.4s ease-in-out infinite; }
+/* Le bouton photo est LE geste de la tournée : grand, au centre de l'écran,
+et « Envoyer » juste dessous, sous le même pouce. */
+#shoot:not(.choisir) { padding-block: 44px; font-size: 1.45rem; border-radius: 20px; }
+#shoot:not(.choisir) svg { width: 36px; height: 36px; }
+#q-send { margin-top: -4px; }
 .shoot.choisir svg { width: 32px; height: 32px; }
 #ic-point { display: none; }
 .shoot.choisir #ic-photo { display: none; }
@@ -469,6 +479,12 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .pl-c.on::before { content: "✓ "; }
 .pl-ok { appearance: none; cursor: pointer; margin-left: auto; min-height: 46px; padding: 8px 20px; border: 0; border-radius: 999px; background: var(--ok); color: #fff; font: 600 1rem var(--font-ui); }
 .pl-s { color: var(--alert); border-color: color-mix(in srgb, var(--alert) 55%, transparent); }
+.pl-p { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 55%, transparent); }
+.pl-c.pl-p.on { background: color-mix(in srgb, var(--ok) 18%, var(--surface)); border-color: var(--ok); color: var(--ink); }
+.loupe-p .pl-p { color: #fff; }
+.loupe-p .pl-c.pl-p.on { background: var(--ok); border-color: var(--ok); }
+.pl-a { font-size: .82rem; color: var(--muted); margin-top: -5px; }
+.vg-p.propre { background: var(--ok); }
 .pl-c.pl-s.on { background: color-mix(in srgb, var(--alert) 18%, var(--surface)); border-color: var(--alert); color: var(--ink); }
 .loupe-p .pl-s { color: #fff; }
 .loupe-p .pl-c.pl-s.on { background: var(--alert); border-color: var(--alert); }
@@ -486,19 +502,14 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   <span class="eyebrow" id="day">Relevé</span>
   <span class="bar-d">
 <span class="count" id="compte">—</span>
+<button type="button" class="mode-b" id="mode-b" hidden></button>
 <img class="logo" id="logo" alt="" hidden>
 </span>
 </div></div>
 
 <div class="wrap">
 
-  <!-- En tête de page : tant que des photos attendent, c'est la première
-       chose qu'on voit. Masqué dès que la file est vide, pour ne pas occuper
-       la place en permanence. -->
-  <button type="button" class="shoot envoi" id="q-send" hidden>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
-    <span id="q-send-lbl">Envoyer</span>
-  </button>
+  
 
   <!-- Points sans photo depuis alerteJours (config.json) : calculé à partir des
      observations de donnees.json. Masqué quand tout est à jour. -->
@@ -540,7 +551,12 @@ fois confirmés sur place par un agent. Masqué quand il n'y en a pas. -->
     <svg id="ic-point" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
     <span id="shoot-lbl">Photographier</span>
   </button>
-  <p class="hint" id="hint">Photographie chaque point, même quand tout va bien.</p>
+  <!-- Juste sous le bouton photo : visible dès qu'une photo attend. -->
+<button type="button" class="shoot envoi" id="q-send" hidden>
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
+<span id="q-send-lbl">Envoyer</span>
+</button>
+<p class="hint" id="hint">Photographie chaque point, même quand tout va bien.</p>
   <!-- Signal « plein » : bandeau fixé en bas de l'écran, 8 s après chaque photo, sans appui rien n'est signalé. -->
   <div class="plein-b" id="plein-b" role="status" hidden></div>
   <button type="button" class="shoot second" id="galerie">
@@ -605,7 +621,7 @@ fois confirmés sur place par un agent. Masqué quand il n'y en a pas. -->
        reste réservée à la photo. -->
   <button type="button" class="share-l" id="share">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1"/></svg>
-    <span>Partager l'application</span>
+    <span>QR code de l'application</span>
   </button>
   <!-- Le code d'accès : saisi une fois, il part avec chaque photo. Le libellé
        affiche le code en place, pour qu'on sache sans ouvrir. -->
@@ -653,8 +669,8 @@ fois confirmés sur place par un agent. Masqué quand il n'y en a pas. -->
      il suit l'adresse au lieu d'être un dessin figé à regénérer à la main. -->
 <div class="sheet" id="share-s" hidden>
   <div class="sheet-c" role="dialog" aria-modal="true" aria-labelledby="share-t">
-    <h2 id="share-t">Partager l'application</h2>
-    <p class="sheet-h">Fais scanner ce code avec l'appareil photo d'un autre téléphone&nbsp;: la tournée s'ouvre directement.</p>
+    <h2 id="share-t">QR code de l'application</h2>
+<p class="sheet-h">À scanner avec l'appareil photo d'un autre téléphone&nbsp;: l'application s'ouvre directement à l'adresse de la commune.</p>
     <div class="qr">
       <svg id="qr" role="img" aria-label="QR code vers l'adresse de l'application"></svg>
     </div>
@@ -898,14 +914,17 @@ const pleinsDe = u => (PLEINS[u] || "").split(",").filter(Boolean);
 const majuscule = s => s.charAt(0).toUpperCase() + s.slice(1);
 async function basculerPlein(uuid, flux) {
   const l = pleinsDe(uuid);
-  const n = l.includes(flux) ? l.filter(x => x !== flux) : l.concat(flux);
+  /* « Propre » exclut plein et sale : cocher l'un décoche l'autre. */
+let n = l.includes(flux) ? l.filter(x => x !== flux)
+: flux === "_propre" ? ["_propre"] : l.filter(x => x !== "_propre").concat(flux);
   if (n.length) PLEINS[uuid] = n.join(","); else delete PLEINS[uuid];
   sauverPleins();
   const it = await qGet(uuid);
   if (it) {
-      const p = n.filter(x => x !== "_sale"); // « _sale » : îlot sale, pas un flux
-      if (p.length) it.plein = p.join(","); else delete it.plein;
-      if (n.includes("_sale")) it.sale = "1"; else delete it.sale;
+      const p = n.filter(x => x[0] !== "_"); // « _sale », « _propre » : état de l'îlot, pas un flux
+if (p.length) it.plein = p.join(","); else delete it.plein;
+if (n.includes("_sale")) it.sale = "1"; else delete it.sale;
+if (n.includes("_propre")) it.propre = "1"; else delete it.propre;
       await qPut(it);
     }
 }
@@ -913,7 +932,8 @@ function puces(uuid, site) {
   const flux = Object.keys((site && site.postes) || {});
   const l = pleinsDe(uuid);
   return flux.map(f => `<button type="button" class="pl-c${l.includes(f) ? " on" : ""}" data-pf="${f}" aria-pressed="${l.includes(f)}">${flux.length === 1 ? "Plein" : majuscule(nomFlux(f))}</button>`).join("")
-      + `<button type="button" class="pl-c pl-s${l.includes("_sale") ? " on" : ""}" data-pf="_sale" aria-pressed="${l.includes("_sale")}">Sale</button>`;
+      + `<button type="button" class="pl-c pl-s${l.includes("_sale") ? " on" : ""}" data-pf="_sale" aria-pressed="${l.includes("_sale")}">Sale</button>`
++ `<button type="button" class="pl-c pl-p${l.includes("_propre") ? " on" : ""}" data-pf="_propre" aria-pressed="${l.includes("_propre")}">Propre</button>`;
 }
 let PB_U = null, PB_S = null, PB_T = null;
 function fermerBandeau() { clearTimeout(PB_T); $("plein-b").hidden = true; PB_U = PB_S = null; }
@@ -928,8 +948,9 @@ function relancerBandeau(ms) {
 }
 function dessinerBandeau() {
   const multi = Object.keys(PB_S.postes || {}).length > 1;
-  $("plein-b").innerHTML = `<span class="pl-t">Photo enregistrée — ${multi ? "un conteneur plein, ou sale ?" : "plein ou sale ?"}</span>`
-    + `<div class="pl-l">${puces(PB_U, PB_S)}${pleinsDe(PB_U).length ? '<button type="button" class="pl-ok">OK</button>' : ""}</div><i class="pl-j"><b></b></i>`;
+  $("plein-b").innerHTML = `<span class="pl-t">Photo enregistrée — comment est l'îlot ?</span>`
++ `<span class="pl-a">${multi ? "Touche le conteneur plein, « Sale » ou « Propre »" : "Touche « Plein », « Sale » ou « Propre »"}, puis OK.</span>`
++ `<div class="pl-l">${puces(PB_U, PB_S)}<button type="button" class="pl-ok">OK</button></div><i class="pl-j"><b></b></i>`;
 }
 /* Fixé en bas de l'écran : la page remonte en haut après chaque photo, un
 bandeau dans le flux restait hors de vue. Sans appui, il s'efface après 8 s ; un premier appui laisse
@@ -943,13 +964,14 @@ function dessinerLoupePlein(uuid) {
   const v = vignettes.find(x => x.uuid === uuid);
   const s = v && SITES.find(x => x.code === v.site_code);
   const el = $("loupe-p"); el.dataset.uuid = uuid || "";
-  el.innerHTML = s ? `<span class="pl-t">Plein ou sale ?</span><div class="pl-l">${puces(uuid, s)}</div>` : "";
+  el.innerHTML = s ? `<span class="pl-t">Plein, sale ou propre ?</span><div class="pl-l">${puces(uuid, s)}</div>` : "";
 }
 const badgePlein = u => {
   const l = pleinsDe(u), t = [];
-  if (l.some(x => x !== "_sale")) t.push("plein");
-  if (l.includes("_sale")) t.push("sale");
-  return t.length ? '<span class="vg-p">' + t.join(" · ") + "</span>" : "";
+  if (l.some(x => x[0] !== "_")) t.push("plein");
+if (l.includes("_sale")) t.push("sale");
+if (l.includes("_propre")) return '<span class="vg-p propre">propre</span>';
+return t.length ? '<span class="vg-p">' + t.join(" · ") + "</span>" : "";
 };
 document.addEventListener("click", async e => {
   const t = e.target; if (!t.closest) return;
@@ -960,7 +982,7 @@ document.addEventListener("click", async e => {
     if (PB_U === u) {
       /* Plein ET sale cochés : tout est dit, on ferme. Sinon 4 s pour l'autre
          signal, ou OK pour fermer tout de suite. */
-      const l = pleinsDe(u), deux = l.includes("_sale") && l.some(x => x !== "_sale");
+      const l = pleinsDe(u), deux = l.includes("_propre") || (l.includes("_sale") && l.some(x => x[0] !== "_"));
       dessinerBandeau(); relancerBandeau(deux ? 700 : 4000);
     }
     rendre(); return;
@@ -1260,10 +1282,34 @@ $("discord-b").addEventListener("click", () => {
   rendre();
 });
 
+/* Sur Android, le système ferme parfois la page pendant que l'appareil photo
+est ouvert (mémoire pleine) : au retour, la page se recharge, la photo n'arrive
+jamais et le point choisi est perdu. On note donc le point AVANT d'ouvrir
+l'appareil : au rechargement, on le rouvre et on prévient l'agent. */
+let siteCamera = null;
 $("shoot").addEventListener("click", () => {
-  if (!courant) { $("round").scrollIntoView({ block: "center", behavior: "smooth" }); return; }
-  $("file").click();
+if (!courant) { $("round").scrollIntoView({ block: "center", behavior: "smooth" }); return; }
+siteCamera = courant;
+try { localStorage.setItem("pav-camera", JSON.stringify({ code: courant.code, t: Date.now() })); } catch {}
+$("file").click();
 });
+/* Retour sans photo (appareil annulé) : la page n'a pas été rechargée, on oublie la note. */
+document.addEventListener("visibilitychange", () => {
+if (document.hidden) return;
+setTimeout(() => { if (!$("busy").hidden) return; try { localStorage.removeItem("pav-camera"); } catch {} }, 4000);
+});
+function repriseCamera() {
+let c = null;
+try { c = JSON.parse(localStorage.getItem("pav-camera") || "null"); localStorage.removeItem("pav-camera"); } catch {}
+if (!c || !c.code || Date.now() - c.t > 10 * 60000) return;
+const s = SITES.find(x => x.code === c.code); if (!s) return;
+courant = s; choixManuel = true;
+$("state-lbl").textContent = "Point repris après la photo";
+$("flash-t").textContent = "Photo non reçue — reprends-la";
+$("flash-s").textContent = `Le téléphone a fermé l'application pendant la prise de vue (mémoire pleine). « ${s.nom} » est déjà choisi : appuie sur « Prendre une photo ».`;
+$("flash").hidden = false;
+rendre();
+}
 
 /* La liste de la tournée EST le sélecteur de point : un appui sur une ligne
    fixe le point courant. Et si un import est en attente, il bascule entier sur
@@ -1375,10 +1421,13 @@ $("raz").addEventListener("click", async () => {
 $("galerie").addEventListener("click", () => $("file-gal").click());
 
 async function traiter(e, source) {
-  const file = e.target.files && e.target.files[0];
-  e.target.value = "";
-  if (!file || !courant) return;
-  const site = courant;
+const file = e.target.files && e.target.files[0];
+e.target.value = "";
+try { localStorage.removeItem("pav-camera"); } catch {}
+/* Le point est celui choisi AU MOMENT d'ouvrir l'appareil : si le GPS l'a
+perdu entre-temps, la photo n'est plus jetée en silence. */
+const site = courant || siteCamera;
+if (!file || !site) return;
   /* Une photo de 12 Mpx met plusieurs secondes à se compresser : sans retour
      visible, l'agent croit que rien ne se passe et appuie deux fois. */
   const occupe = t => { $("busy-txt").textContent = t; $("busy").hidden = false; };
@@ -1433,7 +1482,8 @@ async function traiter(e, source) {
   majFile();   // rien ne part : l’envoi attend un appui sur « Envoyer »
   $("shoot").disabled = false;
   proposerPlein(item.uuid, site); // signal « plein » facultatif
-  remonter();
+/* On garde le bouton photo et « Envoyer » au centre de l'écran. */
+try { $("shoot").scrollIntoView({ block: "center", behavior: "smooth" }); } catch { remonter(); }
 }
 
 $("file").addEventListener("change", e => traiter(e, "camera"));
@@ -1794,6 +1844,7 @@ async function vider() {
       for (const k of ["uuid","horodatage","site_code","lat","lon","precision_m"]) fd.append(k, it[k]);
       if (it.plein) fd.append("plein", it.plein); // flux signalés pleins par l'agent
       if (it.sale) fd.append("sale", it.sale); // îlot signalé sale (dépôt au sol) par l'agent
+if (it.propre) fd.append("propre", it.propre); // îlot signalé propre par l'agent
       fd.append("code", CODE);
          fd.append("commune", (CONF.commune && CONF.commune.nom) || "");
       const r = await fetch(ENDPOINT, { method: "POST", body: fd });
@@ -1938,7 +1989,7 @@ if (!navigator.geolocation) {
 rendre();
 chargerConfig().then(chargerReferentiel).then(chargerAVerifier).then(() => verifierRole());
 // Les photos du jour sont relues au démarrage : rouvrir la page ne perd rien.
-rechargerVignettes().then(rendre).catch(() => {});
+rechargerVignettes().then(rendre).then(repriseCamera).catch(() => {});
 
 /* ──────────────────────────────────────────────────────────────────────────
    PARTAGE DE L'APPLICATION
@@ -1994,7 +2045,20 @@ de lui montrer ce qu'il ne peut pas faire. Le dernier rôle connu est gardé
 pour le hors-ligne, et il ne vaut que pour le code qui l'a obtenu. */
 let ADMIN = null;
 try { ADMIN = JSON.parse(localStorage.getItem("pav-admin") || "null"); } catch {}
-const estAdmin = () => !!(ADMIN && ADMIN.admin && ADMIN.code === CODE);
+/* Rôle donné par le serveur, et mode choisi sur le téléphone : un
+administrateur peut passer en « mode agent » pour alléger l'écran (ni points
+à vérifier, ni création, ni crayons). Le choix est gardé d'une ouverture à l'autre. */
+const roleAdmin = () => !!(ADMIN && ADMIN.admin && ADMIN.code === CODE);
+let MODE = "";
+try { MODE = localStorage.getItem("pav-mode") || ""; } catch {}
+const estAdmin = () => roleAdmin() && MODE !== "agent";
+function majMode() {
+const b = $("mode-b"); if (!b) return;
+b.hidden = !roleAdmin();
+b.classList.toggle("admin", estAdmin());
+b.textContent = estAdmin() ? "Mode admin" : "Mode agent";
+b.setAttribute("aria-label", estAdmin() ? "Mode administrateur : appuie pour passer en mode agent" : "Mode agent : appuie pour passer en mode administrateur");
+}
 async function verifierRole() {
   const url = urlTerrain();
   if (!url || !CODE || !navigator.onLine) return;
@@ -2319,10 +2383,24 @@ rendreAVerifier = function (force) {
   rendreAVerifierBase(force);
   try { rendreNouveau(); } catch {}
   // Lien vers admin.html (gestion des agents) : administrateurs seulement.
-  try { $("lien-admin").hidden = !estAdmin(); } catch {}
+try { $("lien-admin").hidden = !estAdmin(); } catch {}
+try { majMode(); } catch {}
 };
 rendreNouveau();
 try { $("lien-admin").hidden = !estAdmin(); } catch {}
+majMode();
+$("mode-b").addEventListener("click", () => {
+MODE = estAdmin() ? "agent" : "admin";
+try { localStorage.setItem("pav-mode", MODE); } catch {}
+averifOuvert = null; NOUV.ouvert = false;
+rendreAVerifier(true);
+window.dispatchEvent(new Event("pav-mode")); // edition.js retire ou pose les crayons
+$("flash-t").textContent = MODE === "agent" ? "Mode agent" : "Mode administrateur";
+$("flash-s").textContent = MODE === "agent"
+? "Écran allégé : seulement la tournée. Appuie sur « Mode agent » en haut pour revenir."
+: "Points à vérifier, création de points et crayons ✏️ sont de retour.";
+$("flash").hidden = false;
+});
 </script>
 
 <script type="module">
@@ -2336,5 +2414,7 @@ const adresse = await fetch('config.json', { cache: 'no-cache' })
 try { dessiner(document.getElementById('qr'), adresse); } catch {}
 </script>
 
+<script src="avis.js" data-page="collecte" defer></script>
+<script src="edition.js" data-cartes="#round li:not(.vgs)" defer></script>
 </body>
 </html>

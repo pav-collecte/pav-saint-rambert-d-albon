@@ -111,6 +111,10 @@ a { color: inherit; }
   padding: 6px 13px;
 }
 .ft a:hover { background: var(--bg); }
+.ft .lk { display: flex; gap: 6px; flex: none; }
+.ft a.av { background: #E08A00; border-color: #E08A00; color: #fff; font-size: .98rem; font-weight: 700; padding: 9px 18px; box-shadow: 0 2px 8px rgba(224,138,0,.35); }
+.ft a.av:hover { background: #C77700; }
+@media (max-width: 360px) { .ft > span { display: none; } }
 .err { margin: auto; text-align: center; color: var(--muted); font-size: .9rem; }
 </style>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400&display=swap">
@@ -183,7 +187,7 @@ function rendre(d) {
 
     <div class="ft">
       <span>Bac-Score · relevés citoyens</span>
-      <a href="${PAGE}" target="_blank" rel="noopener">Voir le détail</a>
+      <div class="lk"><a class="av" href="${PAGE}${PAGE.includes("?")?"&":"?"}avis=1" target="_blank" rel="noopener" title="Donner votre avis ou une idée">💡 Votre avis</a><a href="${PAGE}" target="_blank" rel="noopener">Voir le détail</a></div>
     </div>`;
 }
 
