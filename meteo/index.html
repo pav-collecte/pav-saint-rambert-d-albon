@@ -126,6 +126,8 @@ section{margin-top:40px}
 
 /* Frise des passages : une bande par îlot, un carré par passage. */
 .frise{display:grid;gap:16px}
+.bac{display:inline-flex;flex-direction:column;align-items:center;gap:1px}.bac-pct{font:600 .7rem var(--mono);color:var(--ink-2)}
+.legende{margin:-4px 0 14px;padding:10px 12px;border-radius:10px;background:var(--bg-2,#f4f1ea);font-size:.8rem;line-height:1.5;color:var(--ink-2)}
 .frow2{display:grid;grid-template-columns:170px 1fr;gap:14px;align-items:start}
 @media (max-width:560px){.frow2{grid-template-columns:1fr;gap:6px}}
 .fr-code{font-family:var(--mono);font-size:.7rem;color:var(--ink-3);letter-spacing:.04em}
@@ -152,6 +154,16 @@ button.fr-cell{appearance:none;background:none;border:0;padding:0;font:inherit;c
 .pj-strip-l a{position:relative;flex:none;display:block;border-radius:7px;overflow:hidden;border:1px solid var(--line)}
 .pj-strip-l img{width:76px;height:58px;object-fit:cover;display:block}
 .pj-strip-l .pj-l{position:absolute;top:3px;left:3px}
+.pj-ag{position:absolute;right:3px;top:3px;padding:1px 5px;border-radius:5px;background:rgba(255,255,255,.92);color:#1d2420;font:600 .62rem var(--mono);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.pj-zoom .pj-ag{position:static}
+.fd-ph figure a{position:relative;display:block}
+.fd-pn{position:absolute;top:6px;left:6px;padding:2px 7px;border-radius:6px;color:#fff;font:700 .8rem var(--mono);box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.fr-sq{position:relative}.fr-ag{position:absolute;right:-6px;top:-7px;font-size:.7rem;line-height:1;background:#fff;border-radius:999px;padding:1px;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.fd-ag{display:block;margin-top:3px;color:#8a5a00;font-size:.74rem}
+.ag{display:inline-block;border-radius:999px;padding:0 3px;line-height:1.25;color:#fff;background:#6b7570}
+.fd-l{white-space:nowrap}.fr-ag.ag-propre,.fr-ag.ag-plein,.fr-ag.ag-sale{font-size:.78rem;padding:1px 2px;border:1.5px solid #fff;top:auto;bottom:-7px}
+.ag.ag-propre{background:var(--sA)}.ag.ag-plein{background:var(--sD)}.ag.ag-sale{background:var(--sE)}
+.pj-ag.ag-propre,.fr-ag.ag-propre{background:var(--sA);color:#fff}.pj-ag.ag-plein,.fr-ag.ag-plein{background:var(--sD);color:#fff}.pj-ag.ag-sale,.fr-ag.ag-sale{background:var(--sE);color:#fff}
 .pj-pts{position:absolute;right:3px;bottom:3px;padding:1px 5px;border-radius:5px;background:rgba(0,0,0,.62);color:#fff;font:600 .68rem var(--mono)}
 .pj-zoom .pj-pts{position:static;background:rgba(255,255,255,.18);margin-left:4px;vertical-align:middle}
 figure.preuve a{cursor:zoom-in}
@@ -346,6 +358,9 @@ details[open] summary{margin-bottom:8px}
     <h2>État des îlots</h2>
     <p>Cliquez le détail d'un îlot pour voir le raisonnement flux par flux.</p>
   </div>
+  <p class="legende"><b>☀️ La météo</b> (soleil, éclaircies, pluie, orage) : l'état du jour, c'est-à-dire le plus mauvais constat parmi la propreté au sol et le remplissage.
+    <br><b>🗑 La poubelle</b> : la jauge de remplissage du site, c'est-à-dire la part de conteneurs pleins ou bloqués, tous flux confondus. Le couvercle s'entrouvre aux deux tiers et déborde quand tout est plein. La lettre à côté est le Bac-Score (propreté, remplissage, récidive).
+    <br><b>Conteneurs non photographiés</b> : rien ne dit qu'ils sont pleins, ils comptent comme disponibles (c'est indiqué dans le détail de chaque flux).</p>
   <div class="grid" id="sites"></div>
 </section>
 
@@ -457,16 +472,34 @@ const NIV=[
 const INCONNU={cls:"lvx",lab:"Sans relevé",wx:"inconnu"};
 const NONVU={cls:"lvx",lab:"Non repéré",wx:"inconnu"};
 let bacSeq=0;
-function bacIcon(frac,col,size){
-  const s=size||44,id="bk"+(++bacSeq),y=(21.6-13.6*frac).toFixed(2),h=(13.6*frac).toFixed(2);
-  const corps="M6.1 8.2h11.8l-.95 12.1a1.9 1.9 0 0 1-1.9 1.75H8.95a1.9 1.9 0 0 1-1.9-1.75z";
-  return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" aria-hidden="true" style="color:var(--ink-2)">'
+/* Jauge de remplissage du site : le niveau monte avec la part de conteneurs
+   pleins ou bloqués ; le couvercle s'entrouvre aux deux tiers et déborde quand
+   tout est plein. r = s.remplissage (null : pas de mesure). */
+function bacIcon(r,size){
+  const s=size||44,id="bk"+(++bacSeq), t=r?Math.max(0,Math.min(1,r.taux)):0;
+  const haut=11, bas=32.6, H=bas-haut, y=(bas-H*t).toFixed(2);
+  const col=!r?'var(--sOff)':t>=1?'var(--sE)':t>=2/3?'var(--sD)':t>=1/3?'var(--sC)':t>0?'var(--sB)':'var(--sA)';
+  const corps="M7 11h18l-1.6 19.9a2 2 0 0 1-2 1.8H10.6a2 2 0 0 1-2-1.8z";
+  const angle=!r||t<2/3?0:t<1?-16:-38, leve=t>=1?-1.2:0;
+  const grad=[1/3,2/3].map(k=>{const yy=(bas-H*k).toFixed(2); return '<path d="M20.8 '+yy+'h2.2" stroke="currentColor" stroke-width="1" opacity=".55"/>';}).join('');
+  const deborde=t>=1?'<g stroke="currentColor" stroke-width=".9">'
+      +'<ellipse cx="11.5" cy="9.6" rx="3.3" ry="2.7" fill="#4b5551"/><ellipse cx="16.6" cy="8.4" rx="3.4" ry="2.9" fill="#5d6a66"/>'
+      +'<ellipse cx="21.2" cy="9.9" rx="2.9" ry="2.4" fill="#4b5551"/><ellipse cx="26.6" cy="13.2" rx="2.3" ry="1.9" fill="#5d6a66"/></g>':'';
+  return '<svg width="'+s+'" height="'+s+'" viewBox="-1 -5 34 41" aria-hidden="true" style="color:var(--ink-2)">'
    +'<defs><clipPath id="'+id+'"><path d="'+corps+'"/></clipPath></defs>'
-   +'<rect x="5" y="'+y+'" width="14" height="'+h+'" fill="'+col+'" clip-path="url(#'+id+')"/>'
-   +'<path d="'+corps+'" fill="none" stroke="currentColor" stroke-width="1.5"/>'
-   +'<path d="M4.2 7.5h15.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>'
-   +'<path d="M9.7 7.5V5.8a1.2 1.2 0 0 1 1.2-1.2h2.2a1.2 1.2 0 0 1 1.2 1.2v1.7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>'
-   +'</svg>';
+   +'<rect x="6" y="'+haut+'" width="20" height="'+H+'" fill="var(--bg-2,#f1eee6)" clip-path="url(#'+id+')"/>'
+   +'<rect x="6" y="'+y+'" width="20" height="'+(H*t).toFixed(2)+'" fill="'+col+'" clip-path="url(#'+id+')"/>'
+   +deborde
+   +'<path d="'+corps+'" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>'+grad
+   +'<g transform="translate(0 '+leve+') rotate('+angle+' 5.6 9.6)">'
+     +'<rect x="5" y="8.2" width="22" height="2.6" rx="1.2" fill="var(--paper,#fff)" stroke="currentColor" stroke-width="1.5"/>'
+     +'<path d="M13.2 8.2V6.6a1.3 1.3 0 0 1 1.3-1.3h3a1.3 1.3 0 0 1 1.3 1.3v1.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>'
+   +'</g></svg>';
+}
+function txtRemplissage(r){
+  if(!r) return 'Remplissage non mesuré';
+  return 'Remplissage du site : '+r.occ+' conteneur'+(r.occ>1?'s':'')+' plein'+(r.occ>1?'s':'')+' ou bloqué'+(r.occ>1?'s':'')+' sur '+r.tot+' ('+Math.round(100*r.taux)+' %)'
+    +(r.pleinFlux&&r.pleinFlux.length?' · saturé : '+r.pleinFlux.map(f=>FLUX_LABEL[f]||f).join(', '):'');
 }
 function scoreStrip(L){
   return '<div class="score" role="img" aria-label="Bac-Score '+(L?L.l:'non noté')+'">'
@@ -565,6 +598,23 @@ function rendu(){
       +(n>1?' · '+n+' photos ce jour-là':'')+'</figcaption></figure>';
   }
 
+  /* Note d'une photo et rôle de l'agent : utilisés par les miniatures des
+     cartes, la visionneuse et le détail de la frise. */
+  function agentPhoto(id,liste){
+    const rows=liste.filter(o=>o.photo===id); if(!rows.length) return null;
+    const portee=rows.some(o=>o.agentPortee==="ilot")?" sur une vue d'ensemble : il porte sur tout l'îlot pendant ce passage":" sur une photo de ce seul flux : il ne porte que sur ce flux";
+    if(rows.some(o=>o.agentPropreSource)) return {tag:"Propre",txt:"Signalé « Propre » par l'agent"+portee+". Son constat prime sur l'analyse des photos."};
+    if(rows.some(o=>o.agentPropre)) return {tag:"Propre",txt:"Notée propre : l'agent a signalé « Propre » pendant ce passage."};
+    const s=[rows.some(o=>o.agentPlein)?"Plein":"",rows.some(o=>o.agentSale)?"Sale":""].filter(Boolean);
+    if(s.length) return {tag:s.join(", "),txt:"Signalé « "+s.join(" » et « ")+" » par l'agent"+(rows.some(o=>o.agentSale)?portee:"")+". La note de cette photo est un minimum pour l'îlot."};
+    const e=[rows.some(o=>o.pleinEtendu)?"plein":"",rows.some(o=>o.saleEtendu)?"sale":""].filter(Boolean);
+    if(e.length) return {tag:e.map(x=>x[0].toUpperCase()+x.slice(1)).join(", "),txt:"Notée "+e.join(" et ")+" : l'agent l'a signalé pendant ce passage."};
+    return null;
+  }
+  function classeAgent(tags){ const t=[].concat(tags).map(a=>a&&a.tag?a.tag:a).join(' ').toLowerCase(); return t.includes('sale')?'ag-sale':t.includes('plein')?'ag-plein':t.includes('propre')?'ag-propre':''; }
+  function bonhomme(tags){ return '<span class="ag '+classeAgent(tags)+'">👤</span>'; }
+  function pastilleAgent(a){ return a?'<span class="pj-ag '+classeAgent(a)+'" title="'+esc(a.txt)+'">👤 '+esc(a.tag)+'</span>':''; }
+
   /* Photos du jour (avis AV-MWW2UCSW-3) : toutes les photos du dernier jour de
 relevé, triées par heure ou par plus mauvaise note. La note est celle du
 passage auquel la photo appartient. Une photo où une personne ou une plaque
@@ -598,7 +648,7 @@ sec.hidden=true;
 const TXT={}; obs.forEach(o=>{ if(o.photo&&o.texte){ const t=TXT[o.photo]=TXT[o.photo]||[]; if(!t.includes(o.texte)) t.push(o.texte); } });
 const lettreDe=p=>'<span class="pj-l" style="background:'+(p.L?'var('+p.L.var+')':'var(--sOff)')+'" title="'+esc(p.L?'Bac-Score '+p.L.l+' — '+p.L.lab:'Non noté')+'">'+(p.L?p.L.l:'·')+'</span>';
 const lettrePhoto=p=>'<span class="pj-l" style="background:'+(p.Lph?'var('+p.Lph.var+')':'var(--sOff)')+'" title="'+esc(p.Lph?'Cette photo : '+p.Lph.l+' — '+p.ptsPh+' point'+(p.ptsPh>1?'s':'')+(p.L?' (passage : '+p.L.l+')':''):'Photo non notée')+'">'+(p.Lph?p.Lph.l:'·')+'</span>'
-  +(p.Lph?'<span class="pj-pts">'+p.ptsPh+' pt'+(p.ptsPh>1?'s':'')+'</span>':'');
+  +(p.Lph?'<span class="pj-pts">'+p.ptsPh+' pt'+(p.ptsPh>1?'s':'')+'</span>':'')+pastilleAgent(p.ag);
 const heure=p=>new Date(p.ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
 const nomP=p=>nomDe[p.site]||p.site;
 const parSite={};
@@ -609,7 +659,7 @@ const p=m[o.photo]||(m[o.photo]={id:o.photo,site:o.site,ts:o.ts,flux:new Set(),p
 p.flux.add(FLUX_LABEL[o.flux]||o.flux); if(o.ts<p.ts) p.ts=o.ts; if(o.personneVisible||o.plaqueLisible) p.prive=true; });
 Object.keys(parSite).forEach(code=>{ parSite[code]=Object.values(parSite[code]).map(p=>{ const lt=lotDe[p.id]; p.L=lt&&lt.L; p.pts=lt&&typeof lt.pts==='number'?lt.pts:-1;
   /* La note de la photo elle-même (miniatures et visionneuse), en plus de celle du passage. */
-  const np=notePhotoAvec(REF,obs,p.id); p.Lph=np&&np.L; p.ptsPh=np?np.pts:null; return p; }).filter(p=>!p.prive).sort((x,y)=>x.ts.localeCompare(y.ts)); });
+  const np=notePhotoAvec(REF,obs,p.id); p.Lph=np&&np.L; p.ptsPh=np?np.pts:null; p.ag=agentPhoto(p.id,obs); return p; }).filter(p=>!p.prive).sort((x,y)=>x.ts.localeCompare(y.ts)); });
 /* Les cartes d'îlots peuvent être dessinées après ce code : on pose les vignettes quand elles sont là. */
 function poserBandeaux(){ Object.keys(parSite).forEach(code=>{ const l=parSite[code];
 const art=[...document.querySelectorAll('article.site')].find(x=>((x.querySelector('.site-code')||{}).textContent||'').includes(code));
@@ -634,6 +684,7 @@ const montrer=()=>{ const p=VUE[i], t=(TXT[p.id]||[]).join(' ');
 f.innerHTML='<button type="button" class="pz-x" aria-label="Fermer">×</button>'+(VUE.length>1?'<button type="button" class="pz-p" aria-label="Photo précédente">‹</button><button type="button" class="pz-n" aria-label="Photo suivante">›</button>':'')
 +'<figure><img src="'+urlVignette(p.id,1600)+'" alt="'+esc('Photo de '+nomP(p))+'"><figcaption>'+lettrePhoto(p)+' <b>'+esc(nomP(p))+'</b> · '+esc(heure(p)+' · '+[...p.flux].join(', '))
 +(p.Lph?' · '+esc('cette photo : '+p.Lph.l+' — '+p.Lph.lab+', '+p.ptsPh+' point'+(p.ptsPh>1?'s':'')):'')+(p.L?' · '+esc('passage : '+p.L.l):'')
++(p.ag?'<span class="pj-txt">'+bonhomme(p.ag)+' '+esc(p.ag.txt)+'</span>':'')
 +(t?'<span class="pj-txt">'+esc(t)+'</span>':'')+'<span class="pz-c">'+(i+1)+' / '+VUE.length+'</span></figcaption></figure>'; };
 const aller=s=>{ i=(i+s+VUE.length)%VUE.length; montrer(); };
 const kb=e=>{ if(e.key==='Escape') fermer(); else if(e.key==='ArrowLeft') aller(-1); else if(e.key==='ArrowRight') aller(1); };
@@ -652,7 +703,7 @@ document.getElementById('sites').innerHTML = sites.map(s=>{
     const vieux = s.dernier && jours(s.dernier)>7;
     return '<article class="site">'
       +'<div class="site-top">'
-        +'<div class="wx '+niv.cls+'">'+icon(niv.wx,26)+'</div>'
+        +'<div class="wx '+niv.cls+'" title="'+esc('Météo du jour : '+niv.lab+' (le plus mauvais constat parmi propreté et remplissage)')+'">'+icon(niv.wx,26)+'</div>'
         +'<div style="min-width:0;flex:1">'
           +'<div class="site-code">'+esc(s.site)+'</div>'
           +'<div class="site-name">'+esc(s.nom)+'</div>'
@@ -661,7 +712,7 @@ document.getElementById('sites').innerHTML = sites.map(s=>{
         +'<span class="pill '+niv.cls+'">'+niv.lab+'</span>'
       +'</div>'
       +'<div class="scorebox">'
-        +'<span class="bac">'+bacIcon(s.L?s.L.fill:0,s.L?'var('+s.L.var+')':'var(--sOff)',44)+'</span>'
+        +'<span class="bac" title="'+esc(txtRemplissage(s.remplissage))+'">'+bacIcon(s.remplissage,46)+'<span class="bac-pct">'+(s.remplissage?Math.round(100*s.remplissage.taux)+' %':'—')+'</span></span>'
         +'<span class="scoreside">'+scoreStrip(s.L)
           +'<span class="scoretxt">'+(s.L?'<b>'+esc(s.L.lab)+'</b> · '+s.pts+' point'+(s.pts>1?'s':'')+' de pénalité'
             +(s.nPhotos>1?' · moyenne de '+s.nPhotos+' photos'+(s.plancherAgent>Math.round(s.ptsMoyen)?' (relevée par le signal de l\'agent)':''):'')
@@ -745,7 +796,10 @@ document.getElementById('sites').innerHTML = sites.map(s=>{
       const leg=esc(h+' · '+[...new Set(rows.map(o=>FLUX_LABEL[o.flux]||o.flux))].join(', '));
       if(rows.some(o=>o.personneVisible||o.plaqueLisible))
         return '<figure><div class="fd-np">Photo non publiée : une personne ou une plaque y est reconnaissable.</div><figcaption>'+leg+'</figcaption></figure>';
-      return '<figure><a href="'+urlPhoto(id)+'" target="_blank" rel="noopener"><img src="'+urlVignette(id,600)+'" loading="lazy" alt="'+esc('Photo de '+h)+'"></a><figcaption>'+leg+'</figcaption></figure>';
+      const np=notePhotoAvec(REF,obs,id), ag=agentPhoto(id,obs);
+      const note=np?'<span class="fd-pn" style="background:var('+np.L.var+')" title="'+esc('Cette photo : '+np.L.l+' — '+np.L.lab+', '+np.pts+' point'+(np.pts>1?'s':''))+'">'+np.L.l+(ag?' '+bonhomme(ag):'')+' · '+np.pts+' pt'+(np.pts>1?'s':'')+'</span>':'';
+      return '<figure><a href="'+urlPhoto(id)+'" target="_blank" rel="noopener">'+note+'<img src="'+urlVignette(id,600)+'" loading="lazy" alt="'+esc('Photo de '+h)+'"></a><figcaption>'+leg
+        +(ag?'<span class="fd-ag">'+bonhomme(ag)+' '+esc(ag.txt)+'</span>':'')+'</figcaption></figure>';
     }).join('');
     const parFlux={};
     l.obs.forEach(o=>{ const p=parFlux[o.flux]; if(!p||new Date(o.ts)>new Date(p.ts)) parFlux[o.flux]=o; });
@@ -764,7 +818,8 @@ document.getElementById('sites').innerHTML = sites.map(s=>{
         +(o.texte?'<span class="fd-tx">'+esc(o.texte)+'</span>':'')+'</li>';
     }).join('');
     const titre=(l.L?'Bac-Score '+l.L.l+' — '+l.L.lab+' · '+l.pts+' point'+(l.pts>1?'s':''):'Non noté')+' · '+dateFR(l.fin)+(l.bar&&l.bar.nom?' · barème « '+l.bar.nom+' »':'');
-    return '<div class="fd-t"><span class="fd-l" style="background:'+col+'">'+(l.L?l.L.l:'?')+'</span><span>'+esc(titre)+'</span></div>'
+    const agDL=ids.map(id=>agentPhoto(id,l.obs)).filter(Boolean), agD=agDL.length>0;
+    return '<div class="fd-t"><span class="fd-l" style="background:'+col+'">'+(l.L?l.L.l:'?')+(agD?' '+bonhomme(agDL):'')+'</span><span>'+esc(titre)+(agD?' · signal de l\'agent':'')+'</span></div>'
       +(photos?'<div class="fd-ph">'+photos+'</div>':'<p class="fd-v">Pas de photo pour ce passage.</p>')
       +'<ul class="fd-f">'+constats+'</ul>';
   }
@@ -775,9 +830,11 @@ document.getElementById('sites').innerHTML = sites.map(s=>{
       const col=l.L?'var('+l.L.var+')':'var(--sOff)';
       const jj=new Date(l.fin).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
       const titre=(l.L?'Bac-Score '+l.L.l+' — '+l.L.lab+' · '+l.pts+' point'+(l.pts>1?'s':'')
-                     :'Non noté')+' · '+dateFR(l.fin)+(l.depot?' · dépôt au sol':'');
+                     :'Non noté')+' · '+dateFR(l.fin)+(l.depot?' · dépôt au sol':'')
+                     +([...new Set(l.obs.map(o=>o.photo).filter(Boolean))].some(id=>agentPhoto(id,l.obs))?' · signal de l\'agent':'');
+      const agL=[...new Set(l.obs.map(o=>o.photo).filter(Boolean))].map(id=>agentPhoto(id,l.obs)).filter(Boolean);
       const inner='<span class="fr-sq'+(l.depot?' depot':'')+'" style="background:'+col+'">'
-        +(l.L?l.L.l:'?')+'</span><span class="fr-dt">'+jj+'</span>';
+        +(l.L?l.L.l:'?')+(agL.length?'<span class="fr-ag '+classeAgent(agL)+'" title="'+esc('Signal de l\'agent : '+[...new Set(agL.map(a=>a.tag))].join(', '))+'">👤</span>':'')+'</span><span class="fr-dt">'+jj+'</span>';
       return l.photo
         ? '<button type="button" class="fr-cell" data-site="'+esc(s.site)+'" data-i="'+i+'" aria-expanded="false" title="'+esc(titre)+'" aria-label="'+esc(titre)+'">'+inner+'</button>'
         : '<button type="button" class="fr-cell" data-site="'+esc(s.site)+'" data-i="'+i+'" aria-expanded="false" title="'+esc(titre)+'" aria-label="'+esc(titre)+'">'+inner+'</button>';

@@ -388,13 +388,36 @@ export function normaliser(donnees){
     const aRef=f=>REF.some(r=>r.site===o.site&&r.flux===f);
     if(SOEURS[o.flux]&&!aRef(o.flux)&&aRef(SOEURS[o.flux])) o.flux=SOEURS[o.flux];
   });
-  /* « Propre » signalé par l'agent : l'humain a vu l'îlot, son constat
-     l'emporte sur l'analyse des photos pour tout le passage (photos prises à
-     moins de la fenêtre de passage d'intervalle, avant ou après). */
+  /* Signaux de l'agent (« Propre », « Sale », « Plein ») : l'humain a vu
+     l'îlot, son constat l'emporte sur l'analyse des photos pendant tout le
+     passage (photos à moins de la fenêtre de passage, avant ou après).
+     Portée selon le cadrage de la photo signalée :
+     - vue d'ensemble (plusieurs flux visibles) : Propre / Sale portent sur
+       tout l'îlot ;
+     - photo d'un seul flux : le signal ne porte que sur ce flux.
+     « Plein » vise toujours le flux choisi par l'agent. */
   const fen=(FENETRE_PASSAGE||30*60000);
-  OBS.filter(o=>o.agentPropre).forEach(p=>{
-    const t=new Date(p.ts).getTime();
-    OBS.forEach(o=>{ if(o.site===p.site&&Math.abs(new Date(o.ts).getTime()-t)<=fen) Object.assign(o,{depotSol:false,sacs:0,pleines:0,bloquees:0,dessus:0,inaccessible:false,cause:"",agentPropre:true}); });
+  const cle=o=>o.uuid||o.photo||o.ts;
+  const lignesDe=k=>OBS.filter(o=>cle(o)===k);
+  const fluxVus=k=>{ const l=lignesDe(k), v=new Set(l.filter(o=>o.vues>0||o.inaccessible).map(o=>o.flux)); return v.size?v:new Set(l.map(o=>o.flux)); };
+  const duPassage=(src,fluxOk)=>{ const t=new Date(src.ts).getTime(); return OBS.filter(o=>o.site===src.site&&Math.abs(new Date(o.ts).getTime()-t)<=fen&&fluxOk(o.flux)); };
+  const sources=f=>{ const vu=new Set(); return OBS.filter(o=>f(o)&&!vu.has(cle(o))&&vu.add(cle(o))); };
+  // Plein : le flux choisi, sur tout le passage.
+  OBS.filter(o=>o.agentPlein).forEach(src=>{
+    src.agentPortee="flux";
+    duPassage(src,f=>f===src.flux).forEach(o=>{ if(o!==src){ o.pleines=Math.max(o.pleines,1); o.vues=Math.max(o.vues,1); o.pleinEtendu=true; } });
+  });
+  // Sale : dépôt sur l'îlot (vue d'ensemble) ou sur le flux de la photo.
+  sources(o=>o.agentSale).forEach(src=>{
+    const fx=fluxVus(cle(src)), global=fx.size>=2;
+    lignesDe(cle(src)).forEach(o=>{ o.agentPortee=global?"ilot":"flux"; });
+    duPassage(src,f=>global||fx.has(f)).forEach(o=>{ if(!o.depotSol){ o.depotSol=true; o.saleEtendu=true; } });
+  });
+  // Propre : en dernier, il l'emporte.
+  sources(o=>o.agentPropre).forEach(src=>{
+    const fx=fluxVus(cle(src)), global=fx.size>=2;
+    lignesDe(cle(src)).forEach(o=>{ o.agentPortee=global?"ilot":"flux"; o.agentPropreSource=true; });
+    duPassage(src,f=>global||fx.has(f)).forEach(o=>Object.assign(o,{depotSol:false,sacs:0,pleines:0,bloquees:0,dessus:0,inaccessible:false,cause:"",agentPropre:true,saleEtendu:false,pleinEtendu:false}));
   });
   return {REF,OBS,commune:donnees.commune||"",departement:donnees.departement||"",maj:donnees.maj||null};
 }
@@ -424,7 +447,12 @@ export function niveauRemplissage(o,ref){
   if(!ref.n) return {n:null,txt:"nombre de conteneurs inconnu"};
   const occupe=o.bloquees+o.pleines;
   const n = Math.min(3, indexPalier(B.remplissage.paliers, taux(o,ref)));
-  return {n,txt:occupe+" sur "+ref.n+" conteneur"+(ref.n>1?"s":"")+" plein ou bloqué"+(occupe>1?"s":"")+(ref.provisoire?" (effectif provisoire)":"")};
+  /* Conteneurs du poste absents des photos : rien ne dit qu'ils sont pleins,
+     ils comptent comme disponibles. On le dit, pour ne pas laisser croire
+     qu'on les a vus. */
+  const nonVus=Math.max(0,ref.n-o.vues);
+  return {n,txt:occupe+" sur "+ref.n+" conteneur"+(ref.n>1?"s":"")+" plein ou bloqué"+(occupe>1?"s":"")+(ref.provisoire?" (effectif provisoire)":"")
+    +(nonVus&&!ref.provisoire?" · "+nonVus+" non photographié"+(nonVus>1?"s":"")+", compté"+(nonVus>1?"s":"")+" disponible"+(nonVus>1?"s":""):"")};
 }
 
 /* ── Un passage = toutes ses photos ────────────────────────────────────────
@@ -497,7 +525,11 @@ export function calcule(REF,obs){
     if(o.agentPropre) bouts.push("signalé propre par l'agent");
     if(nRecid>1) bouts.push(nRecid+" passages avec dépôt sur "+B.recidive.fenetreJours+" j"+(sc.rc===0&&!o.depotSol&&B.recidive.seulementSiDepot?" (sans pénalité : rien au sol aujourd'hui)":""));
     B=b0; LCOUR=l0; FENETRE_PASSAGE=f0;
-    parSite[site].flux.push({flux,niveau,horsRef,sc,bar:infoVersion(h0),detail:bouts.join(" · "),ts:o.ts,test:o.test,
+    /* Remplissage du poste pour la jauge du site : pleins ou bloqués sur
+       l'effectif connu ; les conteneurs non photographiés comptent disponibles. */
+    const rempl=ref.n&&!ref.provisoire&&!(o.vues===0&&!o.inaccessible)
+      ? {occ:o.inaccessible?ref.n:Math.min(ref.n,(o.bloquees||0)+(o.pleines||0)),tot:ref.n} : null;
+    parSite[site].flux.push({flux,niveau,horsRef,sc,rempl,bar:infoVersion(h0),detail:bouts.join(" · "),ts:o.ts,test:o.test,
       photo:o.photo||"", publiable:!!o.photo && !o.personneVisible && !o.plaqueLisible, texte:o.texte||""});
     if(!parSite[site].dernier||new Date(o.ts)>new Date(parSite[site].dernier)) parSite[site].dernier=o.ts;
   });
@@ -517,6 +549,9 @@ export function calcule(REF,obs){
     const mp=moyennePhotos(REF,obs,obs.filter(o=>o.site===s.site&&o.photo),true);
     if(mp){ s.pts=mp.pts; s.L=sous(mp.ts,()=>lettre(mp.pts)); s.nPhotos=mp.n; s.ptsMoyen=mp.moy; s.plancherAgent=mp.plancher; }
     s.flux.sort((a,b)=>(ORDRE_FLUX[a.flux]??9)-(ORDRE_FLUX[b.flux]??9));
+    /* Jauge de remplissage du site : tous flux confondus. */
+    const rs=s.flux.filter(f=>f.rempl), tot=rs.reduce((a,f)=>a+f.rempl.tot,0), occ=rs.reduce((a,f)=>a+f.rempl.occ,0);
+    s.remplissage=tot?{occ,tot,taux:occ/tot,pleinFlux:rs.filter(f=>f.rempl.occ>=f.rempl.tot).map(f=>f.flux)}:null;
   });
   return Object.values(parSite).sort((a,b)=>a.site.localeCompare(b.site));
 }
