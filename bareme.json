@@ -105,7 +105,7 @@
     "ilot": "max",
     "commune": "moyenne"
   },
-  "version": 13,
+  "version": 14,
   "versions": [
     {
       "lettres": [
@@ -412,7 +412,7 @@
       },
       "recidive": {
         "libelle": "Récidive",
-        "fenetreJours": 60,
+        "fenetreJours": 10,
         "paliers": [
           {
             "max": 1,
@@ -440,7 +440,7 @@
         "commune": "moyenne"
       },
       "id": "M3",
-      "nom": "Rurale — récidive à partir du 2e passage",
+      "nom": "Rurale — récidive sur 10 jours, à partir du 2e passage",
       "depuis": "2026-11-27",
       "origine": "modele"
     }
