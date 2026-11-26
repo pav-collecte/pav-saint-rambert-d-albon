@@ -153,7 +153,15 @@ try { var a = JSON.parse(lire("pav-admin") || "null"); return !!(a && a.admin &&
     try { if (faits && faits.get(code)) return true; } catch (e) {}
     return false;
   }
+  /* Photos de ce point encore sur le téléphone, pas parties : elles suivent le
+     point quand on le retire (sinon elles resteraient en attente d'envoi pour
+     un point qui n'existe plus, sans vignette pour les supprimer). */
+  function photosEnAttente(code) {
+    try { return vignettes.filter(function (v) { return v.site_code === code && !v.envoye; }).map(function (v) { return v.uuid; }); } catch (e) { return []; }
+  }
   function oublierLocal(code) {
+    var att = photosEnAttente(code);
+    try { if (att.length && typeof supprimerPhotos === "function") supprimerPhotos(att); } catch (e) {}
     try { var i = SITES.findIndex(function (s) { return s.code === code; }); if (i >= 0) SITES.splice(i, 1); } catch (e) {}
     try { if (VALIDES[code]) { delete VALIDES[code]; sauverValides(); } } catch (e) {}
     try { var rf = JSON.parse(lire("pav-referentiel") || "null"); if (Array.isArray(rf)) ecrire("pav-referentiel", JSON.stringify(rf.filter(function (x) { return x && x.code !== code; }))); } catch (e) {}
@@ -166,7 +174,8 @@ try { var a = JSON.parse(lire("pav-admin") || "null"); return !!(a && a.admin &&
       box.innerHTML = '<h3>' + esc(s.nom) + '</h3><p class="sous">' + esc(s.code) + (publie ? '' : ' · pas encore publié') + '</p>'
         + (publie ? '' : '<p>Ce point n\'existe que sur ce téléphone pour l\'instant : il n\'apparaît pas encore dans le référentiel publié (mise à jour toutes les 15 min). Tu ne peux pas le modifier, mais tu peux le retirer.</p>')
         + '<div class="retrait">' + (conf
-          ? '<p>Retirer <b>' + esc(s.code) + ' — ' + esc(s.nom) + '</b> ? ' + (publie ? 'Il disparaît de la tournée et de la météo (15 min au plus). Ses photos restent dans le classeur, et la console peut le rétablir.' : 'Il sera sorti de la tournée s\'il a été enregistré, et oublié par ce téléphone.') + '</p>'
+          ? '<p>Retirer <b>' + esc(s.code) + ' — ' + esc(s.nom) + '</b> ? ' + (publie ? 'Il disparaît de la tournée et de la météo (15 min au plus). Ses photos restent dans le classeur, et la console peut le rétablir.' : 'Il sera sorti de la tournée s\'il a été enregistré, et oublié par ce téléphone.')
+            + (photosEnAttente(s.code).length ? ' <b>' + (photosEnAttente(s.code).length > 1 ? 'Ses ' + photosEnAttente(s.code).length + ' photos pas encore envoyées seront supprimées' : 'Sa photo pas encore envoyée sera supprimée') + ' de ce téléphone.</b>' : '') + '</p>'
             + '<div class="act" style="margin-top:0"><button type="button" class="non" data-r="non">Garder le point</button><button type="button" class="conf" data-r="oui">Oui, retirer</button></div>'
           : '<button type="button" data-r="ask">Retirer ce point (non valide)</button>') + '</div>'
         + '<div class="msg' + (cl ? " " + cl : "") + '" aria-live="polite">' + esc(msg || "") + '</div>'
@@ -307,6 +316,33 @@ try { var a = JSON.parse(lire("pav-admin") || "null"); return !!(a && a.admin &&
     }
     dessiner();
   }
+
+  /* Photos en attente pour un point qui n'est plus dans la tournée (point
+     retiré) : sans vignette sous un point, on ne pourrait pas les supprimer, et
+     « Envoyer » resterait affiché. Un bandeau les signale et propose de les
+     supprimer. Rien n'est supprimé sans appui. */
+  function orphelines() {
+    try {
+      if (!SITES || !SITES.length) return [];
+      var connus = {}; SITES.forEach(function (x) { connus[x.code] = 1; });
+      try { (A_VERIFIER || []).forEach(function (x) { connus[x.code] = 1; }); } catch (e) {}
+      return vignettes.filter(function (v) { return !v.envoye && !connus[v.site_code]; });
+    } catch (e) { return []; }
+  }
+  function bandeauOrphelines() {
+    var l = orphelines(), el = document.getElementById("pav-orph");
+    if (!l.length) { if (el) el.remove(); return; }
+    var q = document.getElementById("queue"); if (!q) return;
+    if (!el) { el = document.createElement("div"); el.id = "pav-orph"; el.style.cssText = "margin:8px 0;padding:10px 12px;border:1.5px solid #E3A9A3;border-radius:10px;background:#fff;color:#1A1F1C;font:14px/1.4 system-ui,sans-serif"; q.parentNode.insertBefore(el, q.nextSibling); }
+    var codes = l.map(function (v) { return v.site_code; }).filter(function (c, i, t) { return t.indexOf(c) === i; });
+    var sig = l.map(function (v) { return v.uuid; }).join(","); if (el.dataset.sig === sig) return; el.dataset.sig = sig;
+    el.innerHTML = '<b>' + l.length + ' photo' + (l.length > 1 ? 's' : '') + ' en attente pour un point retiré</b> (' + esc(codes.join(", ")) + ').'
+      + '<div style="display:flex;gap:8px;margin-top:8px"><button type="button" style="flex:1;padding:9px;border-radius:9px;border:1.5px solid #B3261E;background:#B3261E;color:#fff;font-weight:600">Supprimer ' + (l.length > 1 ? 'ces photos' : 'cette photo') + '</button></div>';
+    el.querySelector("button").onclick = function () {
+      supprimerPhotos(l.map(function (v) { return v.uuid; })).then(function () { bandeauOrphelines(); });
+    };
+  }
+  setInterval(bandeauOrphelines, 3000);
 
   fetch(BASE + "config.json", { cache: "no-cache" }).then(function (r) { return r.json(); }).catch(function () { return {}; }).then(function (c) {
     CONF = c || {};
