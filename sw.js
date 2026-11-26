@@ -33,7 +33,7 @@ self.addEventListener("fetch", e => {
   const r = e.request;
   if (r.method !== "GET" || new URL(r.url).origin !== self.location.origin) return;
   e.respondWith(
-    fetch(r)
+    fetch(r.mode === "navigate" ? r.url : r, { cache: "no-cache" })
       .then(rep => {
         const copie = rep.clone();
         caches.open(CACHE).then(c => c.put(r, copie)).catch(() => {});
@@ -75,6 +75,24 @@ const supprimer = cle => idb().then(d => new Promise((ok, ko) => {
   t.onerror = () => ko(t.error);
 }));
 
+/* Même registre que la page : les photos parties restent annulables. */
+const ecrireCfg = (cle, val) => idb().then(d => new Promise((ok, ko) => {
+  const t = d.transaction(CFG, "readwrite");
+  t.objectStore(CFG).put(val, cle);
+  t.oncomplete = ok;
+  t.onerror = () => ko(t.error);
+}));
+async function noterEnvoyee(it) {
+  try {
+    const lot = (await lire(CFG, "lot")) || "sans-lot";
+    let d = await lire(CFG, "dernier-envoi");
+    if (!d || d.lot !== lot) d = { lot, items: [] };
+    d.items = d.items.filter(x => x.uuid !== it.uuid);
+    d.items.push(Object.assign({}, it, { envoyeLe: new Date().toISOString() }));
+    await ecrireCfg("dernier-envoi", d);
+  } catch (e) {}
+}
+
 async function viderLaFile() {
   const endpoint = await lire(CFG, "endpoint");
   if (!endpoint) return;                       // rien de configuré : on ne tente rien
@@ -113,6 +131,7 @@ const r = await fetch(endpoint, { method: "POST", body: fd });
     // réessaiera tout seul plus tard, avec son propre délai.
     if (!r.ok) throw new Error("envoi refusé " + r.status);
     await supprimer(it.uuid);
+    await noterEnvoyee(it);
     envoyees++;
   }
   if (envoyees) {

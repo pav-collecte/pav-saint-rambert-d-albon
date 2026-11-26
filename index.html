@@ -236,6 +236,22 @@ et « Envoyer » juste dessous, sous le même pouce. */
 .shoot.envoi { background: var(--ok); color: #06240f; }
 .shoot.envoi:disabled { opacity: .45; }
 .queue.actif { border-style: solid; border-color: var(--signal); }
+/* Annuler le dernier envoi : bouton neutre, bordé, rangé avec l'état d'envoi.
+   Rien à voir avec « Tout effacer » (rouge, en pied de liste), qui ne touche
+   que le téléphone ; celui-ci retire du serveur ce qui vient d'y partir. */
+.annul {
+  appearance: none; cursor: pointer; width: 100%; margin-top: 8px;
+  display: flex; align-items: center; gap: 10px; text-align: left;
+  background: var(--surface); color: var(--ink);
+  border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 12px;
+  font-family: var(--font-ui);
+}
+.annul svg { width: 18px; height: 18px; flex: none; color: var(--muted); }
+.annul span { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.annul b { font-size: .9rem; font-weight: 600; }
+.annul small { font-size: .76rem; color: var(--muted); font-family: var(--font-mono); }
+.annul:disabled { opacity: .5; cursor: default; }
+.annul:active:not(:disabled) { background: var(--bg); }
 .flash {
   background: var(--surface); border: 1px solid var(--ok); border-left: 4px solid var(--ok);
   border-radius: 0 12px 12px 0; padding: 12px 14px;
@@ -614,6 +630,10 @@ fois confirmés sur place par un agent. Masqué quand il n'y en a pas. -->
          pas de reflow à chaque photo. -->
     <i class="q-bar" id="q-bar" hidden><b id="q-jauge"></b></i>
   </div>
+  <button type="button" class="annul" id="q-annul" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+    <span><b>Annuler le dernier envoi</b><small id="q-annul-s"></small></span>
+  </button>
 
   <p class="note" id="note"></p>
 
@@ -896,6 +916,22 @@ async function qPut(v){ try { const d=await idb(); await new Promise((ok,ko)=>{c
 async function qAll(){ try { const d=await idb(); return await new Promise((ok,ko)=>{const q=d.transaction(ST,"readonly").objectStore(ST).getAll();q.onsuccess=()=>ok(q.result);q.onerror=()=>ko(q.error);}); } catch { return memoire; } }
 async function qDel(k){ try { const d=await idb(); await new Promise((ok,ko)=>{const t=d.transaction(ST,"readwrite");t.objectStore(ST).delete(k);t.oncomplete=ok;t.onerror=()=>ko(t.error);}); } catch { memoire = memoire.filter(x=>x.uuid!==k); } }
 
+async function cfgGet(k){ try { const d=await idb(); return await new Promise((ok,ko)=>{const q=d.transaction(CFG,"readonly").objectStore(CFG).get(k);q.onsuccess=()=>ok(q.result);q.onerror=()=>ko(q.error);}); } catch { return undefined; } }
+/* ── dernier envoi, annulable ─────────────────────────────────────────────
+   Chaque appui sur « Envoyer » ouvre un lot. Les photos qui partent y sont
+   gardées entières (photo comprise) : si l'agent annule, le serveur les
+   retire et elles reviennent sur leurs points, prêtes à être corrigées. Le
+   service worker tient le même registre quand il envoie en arrière-plan. */
+const CLE_DERNIER = "dernier-envoi";
+const nouveauLot = () => cfgPut("lot", String(Date.now()));
+async function noterEnvoyee(it) {
+  const lot = (await cfgGet("lot")) || "sans-lot";
+  let d = await cfgGet(CLE_DERNIER);
+  if (!d || d.lot !== lot) d = { lot, items: [] };
+  d.items = d.items.filter(x => x.uuid !== it.uuid);
+  d.items.push(Object.assign({}, it, { envoyeLe: new Date().toISOString() }));
+  await cfgPut(CLE_DERNIER, d);
+}
 async function qVider(){ try { const d=await idb(); await new Promise((ok,ko)=>{const t=d.transaction(ST,"readwrite");t.objectStore(ST).clear();t.oncomplete=ok;t.onerror=()=>ko(t.error);}); } catch {} memoire = []; }
 async function qGet(k){ try { const d=await idb(); return await new Promise((ok,ko)=>{const q=d.transaction(ST,"readonly").objectStore(ST).get(k);q.onsuccess=()=>ok(q.result);q.onerror=()=>ko(q.error);}); } catch { return memoire.find(x=>x.uuid===k); } }
 async function vPut(v){ try { const d=await idb(); await new Promise((ok,ko)=>{const t=d.transaction(VG,"readwrite");t.objectStore(VG).put(v);t.oncomplete=ok;t.onerror=()=>ko(t.error);}); } catch {} }
@@ -1773,6 +1809,7 @@ async function majFile() {
     : `Envoyer ${n} photo${n > 1 ? "s" : ""}`;
   /* La barre ne vit que pendant l'envoi : hors envoi, le compte de photos en
      attente dit déjà tout. */
+  majAnnul();
   const bar = $("q-bar");
   bar.hidden = !envoiEnCours || !envoiTotal;
   if (!bar.hidden) $("q-jauge").style.transform = `scaleX(${envoiFaites / envoiTotal})`;
@@ -1858,6 +1895,7 @@ if (it.propre) fd.append("propre", it.propre); // îlot signalé propre par l'ag
       }
       if (!r.ok) { dernierEtat = `Le serveur a répondu ${r.status} — nouvelle tentative plus tard`; break; }
       await qDel(it.uuid);
+      await noterEnvoyee(it);
       /* La photo est partie : sa vignette quitte l'îlot, mais le passage
          reste inscrit. Sans cette trace, l'agent ne saurait plus où il est
          déjà allé et photographierait deux fois le même point. */
@@ -1878,7 +1916,85 @@ if (it.propre) fd.append("propre", it.propre); // îlot signalé propre par l'ag
 
 // L'appui arme l'envoi : à partir de là, la file se vide seule si le réseau
 // revient. Tant qu'il n'a pas eu lieu, rien ne quitte le téléphone.
-$("q-send").addEventListener("click", () => { dernierEtat = ""; armer(true); vider(); demanderSync(); });
+$("q-send").addEventListener("click", async () => {
+  if (!envoiEnCours) await nouveauLot();
+  dernierEtat = ""; armer(true); vider(); demanderSync();
+});
+
+/* ── annuler le dernier envoi ─────────────────────────────────────────────
+   Possible le jour même, pour le seul dernier lot. Le serveur retire les
+   photos (classeur, Drive, météo) ; le téléphone les remet sur leurs points,
+   en attente, sans les renvoyer : l'agent corrige puis renvoie. */
+var DERNIER = null;
+const hhmm = iso => new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+const jourLocal = iso => { const d = new Date(iso); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+async function majAnnul() {
+  const d = await cfgGet(CLE_DERNIER);
+  const b = $("q-annul"); if (!b) return;
+  const items = (d && d.items) || [];
+  const fin = items.length ? items[items.length - 1].envoyeLe : null;
+  DERNIER = items.length && jourLocal(fin) === jourLocal(new Date().toISOString()) ? d : null;
+  b.hidden = !DERNIER || !ENDPOINT;
+  if (b.hidden) return;
+  const pts = new Set(items.map(x => x.site_code)).size;
+  $("q-annul-s").textContent = `${items.length} photo${items.length > 1 ? "s" : ""} · ${pts} point${pts > 1 ? "s" : ""} · envoyé${items.length > 1 ? "es" : "e"} à ${hhmm(fin)}`
+    + (navigator.onLine ? "" : " · hors ligne");
+  b.disabled = envoiEnCours || !navigator.onLine;
+}
+$("q-annul").addEventListener("click", async () => {
+  if (!DERNIER || envoiEnCours) return;
+  const items = DERNIER.items;
+  const noms = [...new Set(items.map(x => { const s = SITES.find(y => y.code === x.site_code); return s ? s.nom : x.site_code; }))];
+  const n = items.length;
+  if (!confirm(`Annuler le dernier envoi ?\n\nLes ${n > 1 ? n + " photos envoyées" : "photo envoyée"} à ${hhmm(items[n - 1].envoyeLe)} seront retirées du serveur et de la météo :\n• ${noms.join("\n• ")}\n\nElles reviennent sur leurs points, sur ce téléphone, sans repartir : corrige-les puis renvoie-les.`)) return;
+  const b = $("q-annul"); b.disabled = true;
+  $("q-annul-s").textContent = "Retrait en cours…";
+  let rep = null;
+  try {
+    /* Formulaire plutôt que JSON : même forme que l'envoi des photos, sans
+       requête préalable CORS. */
+    const fd = new FormData();
+    fd.append("code", CODE);
+    fd.append("commune", (CONF.commune && CONF.commune.nom) || "");
+    fd.append("uuids", items.map(x => x.uuid).join(","));
+    const r = await fetch(ENDPOINT.replace(/\/[^\/]*$/, "/pav-annuler"), { method: "POST", body: fd });
+    if (r.status === 401 || r.status === 403) { alert("Code d'accès refusé : l'envoi n'a pas été annulé."); majAnnul(); return; }
+    if (!r.ok) throw new Error(r.status);
+    rep = await r.json().catch(() => ({}));
+  } catch (e) {
+    alert("Le serveur n'a pas pu annuler l'envoi (" + (e && e.message || "réseau") + "). Réessaie dans un moment.");
+    majAnnul(); return;
+  }
+  /* Seules les photos que le serveur a vraiment retirées reviennent sur leurs
+     points. Une photo encore en cours d'analyse (pas encore inscrite) reste
+     dans le lot : on pourra réessayer l'annulation dans un instant. */
+  const faites = new Set(rep && Array.isArray(rep.uuids) ? rep.uuids : items.map(x => x.uuid));
+  const rendues = items.filter(x => faites.has(x.uuid)), restent = items.filter(x => !faites.has(x.uuid));
+  armer(false);
+  for (const x of rendues) {
+    const it = Object.assign({}, x); delete it.envoyeLe;
+    await qPut(it);
+    const l = (it.plein ? it.plein.split(",") : []).concat(it.sale ? ["_sale"] : [], it.propre ? ["_propre"] : []);
+    if (l.length) PLEINS[it.uuid] = l.join(",");
+    const v = (await vAll()).find(y => y.uuid === it.uuid);
+    await vPut(Object.assign(v || { uuid: it.uuid, site_code: it.site_code, horodatage: it.horodatage }, {
+      jour: jour(), envoye: false, vig: await compresser(it.photo, 200, .55)
+    }));
+  }
+  sauverPleins();
+  await cfgPut(CLE_DERNIER, restent.length ? Object.assign({}, DERNIER, { items: restent }) : null);
+  const ret = rendues.length;
+  dernierEtat = ret ? `Envoi annulé : ${ret} photo${ret > 1 ? "s" : ""} retirée${ret > 1 ? "s" : ""} du serveur` : "Rien à retirer pour l'instant — réessaie dans une minute";
+  await rechargerVignettes();
+  rendre(); majFile();
+  $("flash-t").textContent = "Envoi annulé";
+  const pts = new Set(rendues.map(x => x.site_code)).size;
+  $("flash-s").textContent = (ret ? `${ret} photo${ret > 1 ? "s" : ""} de retour sur ${pts} point${pts > 1 ? "s" : ""}, en attente — rien ne repart sans « Envoyer »` : "")
+    + (restent.length ? `${ret ? " · " : ""}${restent.length} encore en cours d'analyse sur le serveur : réessaie l'annulation dans une minute` : "");
+  $("flash").hidden = false;
+});
+window.addEventListener("online", majAnnul);
+window.addEventListener("offline", majAnnul);
 window.addEventListener("online", vider);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) vider(); });
 setInterval(() => { qAll().then(q => { if (q.length) vider(); }); }, 30000);
@@ -2415,6 +2531,6 @@ try { dessiner(document.getElementById('qr'), adresse); } catch {}
 </script>
 
 <script src="avis.js" data-page="collecte" defer></script>
-<script src="edition.js" data-cartes="#round li:not(.vgs)" defer></script>
+<script src="edition.js?v=20261126b" data-cartes="#round li:not(.vgs)" defer></script>
 </body>
 </html>
