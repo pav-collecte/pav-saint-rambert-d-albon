@@ -46,11 +46,17 @@ export const BAREME_DEFAUT = {
     inaccessible: 4,
     paliers: [ {max:0,points:0}, {max:1/3,points:1}, {max:2/3,points:2}, {max:null,points:4} ],
   },
-  /* Nombre de passages avec dépôt au sol dans la fenêtre, le relevé compris. */
+  /* Nombre de passages avec dépôt au sol dans la fenêtre, le relevé compris.
+     seulementSiDepot : la récidive ne s'ajoute que si le relevé du jour montre
+     lui-même un dépôt (un îlot propre aujourd'hui est noté sur ce qu'on voit).
+     confianceMin : une détection moins sûre que ce seuil ne compte pas comme
+     passage avec dépôt (elle reste notée en propreté le jour même). */
   recidive: {
     libelle: "Récidive",
     fenetreJours: 30,
     paliers: [ {max:0,points:0}, {max:1,points:1}, {max:3,points:2}, {max:null,points:4} ],
+    seulementSiDepot: true,
+    confianceMin: 0.6,
   },
   /* Plusieurs photos du même dépôt prises coup sur coup sont UN passage :
      sinon le score récompenserait la parcimonie en photos. */
@@ -136,6 +142,8 @@ export function normaliserBareme(brut) {
       libelle: String((b.recidive && b.recidive.libelle) || D.recidive.libelle),
       fenetreJours: Math.max(1, Math.round(positif(b.recidive && b.recidive.fenetreJours, D.recidive.fenetreJours))),
       paliers: paliersValides(b.recidive && b.recidive.paliers, D.recidive.paliers, problemes, "récidive"),
+      seulementSiDepot: !(b.recidive && (b.recidive.seulementSiDepot === false || b.recidive.seulementSiDepot === "non")),
+      confianceMin: Math.min(1, positif(b.recidive && b.recidive.confianceMin, D.recidive.confianceMin)),
     },
     passage: { minutes: Math.max(0, positif(b.passage && b.passage.minutes, D.passage.minutes)) },
     agregation: {
@@ -245,6 +253,9 @@ export function ptsRemplissage(o,ref){
   return pointsPalier(B.remplissage.paliers,taux(o,ref));
 }
 export function ptsRecidive(n){ return pointsPalier(B.recidive.paliers,n); }
+/* La récidive appliquée à un relevé : rien si le relevé du jour est propre
+   (réglage seulementSiDepot, actif par défaut). */
+export function ptsRecidiveReleve(o,n){ return (B.recidive.seulementSiDepot && !o.depotSol) ? 0 : ptsRecidive(n); }
 
 /* Arrondi au dix-millième : un seuil écrit 0,3333 dans bareme.json doit se
    comporter comme le tiers exact, sinon 1 conteneur plein sur 3 basculerait
@@ -254,6 +265,7 @@ const taux=(o,ref)=>Math.round((o.bloquees+o.pleines)/ref.n*10000)/10000;
 export function nPassagesAvecDepot(site,flux,tFin,obs){
   const fenetre=B.recidive.fenetreJours*86400000;
   const liste=obs.filter(x=>x.site===site&&x.flux===flux&&x.depotSol
+    &&!(x.confiance<B.recidive.confianceMin)
     &&new Date(x.ts).getTime()<=tFin
     &&new Date(x.ts).getTime()>=tFin-fenetre)
     .sort((a,b)=>new Date(a.ts)-new Date(b.ts));
@@ -314,6 +326,8 @@ export function decrireBareme(){
     derniereLettre: derniere.l,
     premiereLettre: echelle[0].l,
     fenetreJours: B.recidive.fenetreJours,
+    recidiveSeulementSiDepot: B.recidive.seulementSiDepot,
+    recidiveConfianceMin: B.recidive.confianceMin,
     passageMinutes: B.passage.minutes,
     agregation: {...B.agregation},
     problemes: B.problemes || [],
@@ -342,7 +356,9 @@ export function normaliser(donnees){
     vues:Number(o.vues)||0, dessus:Number(o.dessus)||0,
     bloquees:Number(o.bloquees)||0, pleines:Number(o.pleines)||0,
     depotSol:!!o.depotSol, sacs:Number(o.sacs)||0,
-    cause:o.cause||"", confiance:Number(o.confiance)||0, texte:o.texte||"",
+    cause:o.cause||"", texte:o.texte||"",
+    /* Absente des anciennes données : on la tient pour sûre. */
+    confiance:(o.confiance===undefined||o.confiance===null||o.confiance==="")?1:(Number(o.confiance)||0),
     /* Deux drapeaux posés par le classifieur. Ils ne changent rien à la note :
        ils interdisent seulement de publier la photo. Absents du fichier (ancienne
        version des données), ils valent faux. */
@@ -410,13 +426,13 @@ export function calcule(REF,obs){
     const p=niveauProprete(o), rm=niveauRemplissage(o,ref);
     const niveau=Math.max(p, rm.n==null?0:rm.n);
     const nRecid=nPassagesAvecDepot(site,flux,new Date(o.ts).getTime(),obs);
-    const sc={pr:ptsProprete(o.sacs,o.depotSol),re:ptsRemplissage(o,ref),rc:ptsRecidive(nRecid),nRecid};
+    const sc={pr:ptsProprete(o.sacs,o.depotSol),re:ptsRemplissage(o,ref),rc:ptsRecidiveReleve(o,nRecid),nRecid};
     sc.total=sc.pr+sc.re+sc.rc; sc.L=lettre(sc.total);
     const bouts=[];
     bouts.push(o.sacs>0?o.sacs+" sac"+(o.sacs>1?"s":"")+" au sol":"rien au sol");
     bouts.push(rm.txt);
     if(o.cause) bouts.push((CAUSE_LABEL[o.cause]||o.cause).toLowerCase());
-    if(nRecid>1) bouts.push(nRecid+" passages avec dépôt sur "+B.recidive.fenetreJours+" j");
+    if(nRecid>1) bouts.push(nRecid+" passages avec dépôt sur "+B.recidive.fenetreJours+" j"+(sc.rc===0&&!o.depotSol&&B.recidive.seulementSiDepot?" (sans pénalité : rien au sol aujourd'hui)":""));
     B=b0; LCOUR=l0; FENETRE_PASSAGE=f0;
     parSite[site].flux.push({flux,niveau,horsRef,sc,bar:infoVersion(h0),detail:bouts.join(" · "),ts:o.ts,test:o.test,
       photo:o.photo||"", publiable:!!o.photo && !o.personneVisible && !o.plaqueLisible, texte:o.texte||""});
@@ -466,7 +482,7 @@ export function passagesParSite(REF,obs){
         const ref=unitesRef(REF,o.site,o.flux,obs);
         
         // Détail par critère (pr, re, rc) gardé pour les statistiques de la page détaillée.
-        const c=sous(o.ts,()=>({pr:ptsProprete(o.sacs,o.depotSol),re:ptsRemplissage(o,ref),rc:ptsRecidive(nPassagesAvecDepot(o.site,o.flux,new Date(o.ts).getTime(),obs))}));
+        const c=sous(o.ts,()=>({pr:ptsProprete(o.sacs,o.depotSol),re:ptsRemplissage(o,ref),rc:ptsRecidiveReleve(o,nPassagesAvecDepot(o.site,o.flux,new Date(o.ts).getTime(),obs))}));
         const total=c.pr+c.re+c.rc;
         if(pts===null||total>pts){pts=total; pire=o; crit=c;}
       });

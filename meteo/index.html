@@ -996,7 +996,9 @@ document.getElementById('sites').innerHTML = sites.map(s=>{
     + "qui permet de montrer au syndicat de collecte qu'un point revient sans cesse, "
     + "même quand chaque constat pris isolément paraît modeste. Elle se compte en "
     + "passages sur " + BAR.fenetreJours + " jours : plusieurs photos du même dépôt, "
-    + "prises à moins de " + BAR.passageMinutes + " minutes d'intervalle, ne comptent qu'une fois.";
+    + "prises à moins de " + BAR.passageMinutes + " minutes d'intervalle, ne comptent qu'une fois."
+    + (BAR.recidiveSeulementSiDepot ? " Elle ne s'ajoute que si le relevé du jour montre lui-même un dépôt : un îlot propre est noté sur ce qu'on voit aujourd'hui." : "")
+    + (BAR.recidiveConfianceMin > 0 ? " Une détection incertaine (confiance de l'analyse sous " + Math.round(BAR.recidiveConfianceMin * 100) + " %) ne compte pas comme passage avec dépôt." : "");
 }
 
 
