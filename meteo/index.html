@@ -152,6 +152,8 @@ button.fr-cell{appearance:none;background:none;border:0;padding:0;font:inherit;c
 .pj-strip-l a{position:relative;flex:none;display:block;border-radius:7px;overflow:hidden;border:1px solid var(--line)}
 .pj-strip-l img{width:76px;height:58px;object-fit:cover;display:block}
 .pj-strip-l .pj-l{position:absolute;top:3px;left:3px}
+.pj-pts{position:absolute;right:3px;bottom:3px;padding:1px 5px;border-radius:5px;background:rgba(0,0,0,.62);color:#fff;font:600 .68rem var(--mono)}
+.pj-zoom .pj-pts{position:static;background:rgba(255,255,255,.18);margin-left:4px;vertical-align:middle}
 figure.preuve a{cursor:zoom-in}
 .pj-liste.pj2{display:block}
 .pj-liste .pj-hero{margin:0 0 12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;position:relative}
@@ -433,6 +435,10 @@ details[open] summary{margin-bottom:8px}
    implémentation du barème, partagée avec la vignette. */
 import {LETTRES, FLUX_LABEL, dateFR, jours, normaliser, appliquerBareme, decrireBareme,
         calcule as calculeAvec, passagesParSite as passagesAvec} from './bac-score.js';
+/* Fonctions récentes importées sans exigence : une page à jour avec un calcul
+   encore en cache (ancienne version) doit s'afficher quand même. */
+import * as BS from './bac-score.js';
+const notePhotoAvec=(R,o,id)=>typeof BS.notePhoto==='function'?BS.notePhoto(R,o,id):null;
 import {chargerConfig, chargerBareme, urlPhoto, urlVignette, libelleCommune} from './config.js';
 
 let REF=[], OBS=[];
@@ -591,6 +597,8 @@ let tri='date';
 sec.hidden=true;
 const TXT={}; obs.forEach(o=>{ if(o.photo&&o.texte){ const t=TXT[o.photo]=TXT[o.photo]||[]; if(!t.includes(o.texte)) t.push(o.texte); } });
 const lettreDe=p=>'<span class="pj-l" style="background:'+(p.L?'var('+p.L.var+')':'var(--sOff)')+'" title="'+esc(p.L?'Bac-Score '+p.L.l+' — '+p.L.lab:'Non noté')+'">'+(p.L?p.L.l:'·')+'</span>';
+const lettrePhoto=p=>'<span class="pj-l" style="background:'+(p.Lph?'var('+p.Lph.var+')':'var(--sOff)')+'" title="'+esc(p.Lph?'Cette photo : '+p.Lph.l+' — '+p.ptsPh+' point'+(p.ptsPh>1?'s':'')+(p.L?' (passage : '+p.L.l+')':''):'Photo non notée')+'">'+(p.Lph?p.Lph.l:'·')+'</span>'
+  +(p.Lph?'<span class="pj-pts">'+p.ptsPh+' pt'+(p.ptsPh>1?'s':'')+'</span>':'');
 const heure=p=>new Date(p.ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
 const nomP=p=>nomDe[p.site]||p.site;
 const parSite={};
@@ -599,7 +607,9 @@ obs.forEach(o=>{ if(!o.photo||!o.ts||!o.site||jourDe(o.ts)!==dernierJour[o.site]
 const m=parSite[o.site]=parSite[o.site]||{};
 const p=m[o.photo]||(m[o.photo]={id:o.photo,site:o.site,ts:o.ts,flux:new Set(),prive:false});
 p.flux.add(FLUX_LABEL[o.flux]||o.flux); if(o.ts<p.ts) p.ts=o.ts; if(o.personneVisible||o.plaqueLisible) p.prive=true; });
-Object.keys(parSite).forEach(code=>{ parSite[code]=Object.values(parSite[code]).map(p=>{ const lt=lotDe[p.id]; p.L=lt&&lt.L; p.pts=lt&&typeof lt.pts==='number'?lt.pts:-1; return p; }).filter(p=>!p.prive).sort((x,y)=>x.ts.localeCompare(y.ts)); });
+Object.keys(parSite).forEach(code=>{ parSite[code]=Object.values(parSite[code]).map(p=>{ const lt=lotDe[p.id]; p.L=lt&&lt.L; p.pts=lt&&typeof lt.pts==='number'?lt.pts:-1;
+  /* La note de la photo elle-même (miniatures et visionneuse), en plus de celle du passage. */
+  const np=notePhotoAvec(REF,obs,p.id); p.Lph=np&&np.L; p.ptsPh=np?np.pts:null; return p; }).filter(p=>!p.prive).sort((x,y)=>x.ts.localeCompare(y.ts)); });
 /* Les cartes d'îlots peuvent être dessinées après ce code : on pose les vignettes quand elles sont là. */
 function poserBandeaux(){ Object.keys(parSite).forEach(code=>{ const l=parSite[code];
 const art=[...document.querySelectorAll('article.site')].find(x=>((x.querySelector('.site-code')||{}).textContent||'').includes(code));
@@ -611,7 +621,7 @@ if(l.length<2) return;
 const div=document.createElement('div'); div.className='pj-strip';
 const j=dernierJour[code];
 div.innerHTML='<div class="pj-strip-t">'+l.length+' photos '+(j===auj?"aujourd'hui":'le '+new Date(j+'T12:00').toLocaleDateString('fr-FR',{day:'numeric',month:'long'}))+'</div><div class="pj-strip-l">'
-+l.map(p=>'<a href="#" data-zoom="'+esc(p.id)+'" data-site="'+esc(code)+'" title="'+esc(heure(p)+' · '+[...p.flux].join(', '))+'">'+lettreDe(p)+'<img src="'+urlVignette(p.id,240)+'" loading="lazy" alt="'+esc('Photo de '+nomP(p)+' à '+heure(p))+'"></a>').join('')+'</div>';
++l.map(p=>'<a href="#" data-zoom="'+esc(p.id)+'" data-site="'+esc(code)+'" title="'+esc(heure(p)+' · '+[...p.flux].join(', '))+'">'+lettrePhoto(p)+'<img src="'+urlVignette(p.id,240)+'" loading="lazy" alt="'+esc('Photo de '+nomP(p)+' à '+heure(p))+'"></a>').join('')+'</div>';
 if(fig) fig.after(div); else { const sb=art.querySelector('.scorebox'); if(sb) sb.after(div); else art.appendChild(div); }
 }); }
 poserBandeaux(); setTimeout(poserBandeaux,0); setTimeout(poserBandeaux,800);
@@ -622,7 +632,8 @@ VUE=liste||[]; let i=VUE.findIndex(p=>p.id===id); if(i<0) return;
 const f=document.createElement('div'); f.className='pj-zoom'; f.setAttribute('role','dialog'); f.setAttribute('aria-modal','true');
 const montrer=()=>{ const p=VUE[i], t=(TXT[p.id]||[]).join(' ');
 f.innerHTML='<button type="button" class="pz-x" aria-label="Fermer">×</button>'+(VUE.length>1?'<button type="button" class="pz-p" aria-label="Photo précédente">‹</button><button type="button" class="pz-n" aria-label="Photo suivante">›</button>':'')
-+'<figure><img src="'+urlVignette(p.id,1600)+'" alt="'+esc('Photo de '+nomP(p))+'"><figcaption>'+lettreDe(p)+' <b>'+esc(nomP(p))+'</b> · '+esc(heure(p)+' · '+[...p.flux].join(', '))+(p.L?' · '+esc(p.L.l+' — '+p.L.lab):'')
++'<figure><img src="'+urlVignette(p.id,1600)+'" alt="'+esc('Photo de '+nomP(p))+'"><figcaption>'+lettrePhoto(p)+' <b>'+esc(nomP(p))+'</b> · '+esc(heure(p)+' · '+[...p.flux].join(', '))
++(p.Lph?' · '+esc('cette photo : '+p.Lph.l+' — '+p.Lph.lab+', '+p.ptsPh+' point'+(p.ptsPh>1?'s':'')):'')+(p.L?' · '+esc('passage : '+p.L.l):'')
 +(t?'<span class="pj-txt">'+esc(t)+'</span>':'')+'<span class="pz-c">'+(i+1)+' / '+VUE.length+'</span></figcaption></figure>'; };
 const aller=s=>{ i=(i+s+VUE.length)%VUE.length; montrer(); };
 const kb=e=>{ if(e.key==='Escape') fermer(); else if(e.key==='ArrowLeft') aller(-1); else if(e.key==='ArrowRight') aller(1); };
@@ -652,7 +663,9 @@ document.getElementById('sites').innerHTML = sites.map(s=>{
       +'<div class="scorebox">'
         +'<span class="bac">'+bacIcon(s.L?s.L.fill:0,s.L?'var('+s.L.var+')':'var(--sOff)',44)+'</span>'
         +'<span class="scoreside">'+scoreStrip(s.L)
-          +'<span class="scoretxt">'+(s.L?'<b>'+esc(s.L.lab)+'</b> · '+s.pts+' point'+(s.pts>1?'s':'')+' de pénalité':'<b>Non noté</b> · aucun relevé exploitable')+'</span>'
+          +'<span class="scoretxt">'+(s.L?'<b>'+esc(s.L.lab)+'</b> · '+s.pts+' point'+(s.pts>1?'s':'')+' de pénalité'
+            +(s.nPhotos>1?' · moyenne de '+s.nPhotos+' photos'+(s.plancherAgent>Math.round(s.ptsMoyen)?' (relevée par le signal de l\'agent)':''):'')
+            :'<b>Non noté</b> · aucun relevé exploitable')+'</span>'
         +'</span>'
       +'</div>'
       +preuve(s)

@@ -105,7 +105,7 @@
     "ilot": "max",
     "commune": "moyenne"
   },
-  "version": 14,
+  "version": 15,
   "versions": [
     {
       "lettres": [
@@ -436,11 +436,11 @@
         "minutes": 30
       },
       "agregation": {
-        "ilot": "max",
+        "ilot": "moyenne",
         "commune": "moyenne"
       },
       "id": "M3",
-      "nom": "Rurale — récidive sur 10 jours, à partir du 2e passage",
+      "nom": "Rurale — récidive 10 j dès le 2e passage, îlot en moyenne",
       "depuis": "2026-11-27",
       "origine": "modele"
     }
