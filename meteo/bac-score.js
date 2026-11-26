@@ -396,6 +396,35 @@ export function niveauRemplissage(o,ref){
   return {n,txt:occupe+" sur "+ref.n+" conteneur"+(ref.n>1?"s":"")+" plein ou bloqué"+(occupe>1?"s":"")+(ref.provisoire?" (effectif provisoire)":"")};
 }
 
+/* ── Un passage = toutes ses photos ────────────────────────────────────────
+   Plusieurs photos prises coup sur coup forment UN passage. Pour un flux, la
+   note du passage tient compte de toutes ces photos, pas de la dernière seule :
+   on garde le pire constat (conteneurs pleins ou bloqués, sacs au sol), un
+   dépôt vu sur une photo reste vu, et un signal de l'agent (« Plein »,
+   « Sale ») n'est pas effacé par une photo prise juste après sans signal.
+   Le reste (photo, texte, heure) vient de la photo la plus récente. */
+export function fusionPassage(liste){
+  if(liste.length<2) return liste[0];
+  const tri=liste.slice().sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  const f={...tri[0]}, max=k=>Math.max(...tri.map(o=>Number(o[k])||0));
+  f.vues=max("vues"); f.dessus=max("dessus"); f.bloquees=max("bloquees"); f.pleines=max("pleines");
+  f.sacs=max("sacs"); f.depotSol=tri.some(o=>o.depotSol); f.inaccessible=tri.some(o=>o.inaccessible);
+  const pire=tri.slice().sort((a,b)=>(b.sacs-a.sacs)||((b.depotSol?1:0)-(a.depotSol?1:0)))[0];
+  if(f.depotSol&&!tri[0].depotSol){ f.cause=pire.cause||f.cause; }
+  f.confiance=Math.max(...tri.filter(o=>o.depotSol===f.depotSol).map(o=>o.confiance));
+  f.nPhotos=tri.length;
+  return f;
+}
+/* Les photos d'un flux qui appartiennent au même passage que le relevé o :
+   on remonte les photos de l'îlot (tous flux) tant qu'elles se suivent à moins
+   de FENETRE_PASSAGE d'intervalle. */
+function photosDuPassage(o,obs){
+  const site=obs.filter(x=>x.site===o.site&&new Date(x.ts)<=new Date(o.ts)).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  let debut=new Date(o.ts).getTime(), prec=debut;
+  for(const x of site){ const t=new Date(x.ts).getTime(); if(prec-t>FENETRE_PASSAGE) break; debut=t; prec=t; }
+  return site.filter(x=>x.flux===o.flux&&new Date(x.ts).getTime()>=debut);
+}
+
 /* ── État courant de chaque îlot ──────────────────────────────────────────
    Le dernier relevé de chaque flux ; l'îlot retient le flux le plus dégradé. */
 export function calcule(REF,obs){
@@ -410,7 +439,7 @@ export function calcule(REF,obs){
     const [site,flux]=k.split("|");
     if(!parSite[site]) return;
     const liste=obs.filter(o=>o.site===site&&o.flux===flux).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
-    const o=liste[0];
+    const o=liste[0] && fusionPassage(photosDuPassage(liste[0],obs));
     const horsRef=!REF.some(r=>r.site===site&&r.flux===flux);
     if(!o){parSite[site].flux.push({flux,niveau:null,horsRef,detail:"aucun relevé"});return}
     const ref=unitesRef(REF,site,flux,obs);
@@ -429,9 +458,10 @@ export function calcule(REF,obs){
     const sc={pr:ptsProprete(o.sacs,o.depotSol),re:ptsRemplissage(o,ref),rc:ptsRecidiveReleve(o,nRecid),nRecid};
     sc.total=sc.pr+sc.re+sc.rc; sc.L=lettre(sc.total);
     const bouts=[];
-    bouts.push(o.sacs>0?o.sacs+" sac"+(o.sacs>1?"s":"")+" au sol":"rien au sol");
+    bouts.push(o.sacs>0?o.sacs+" sac"+(o.sacs>1?"s":"")+" au sol":o.depotSol?"dépôt au sol":"rien au sol");
     bouts.push(rm.txt);
     if(o.cause) bouts.push((CAUSE_LABEL[o.cause]||o.cause).toLowerCase());
+    if(o.nPhotos>1) bouts.push(o.nPhotos+" photos de ce passage");
     if(nRecid>1) bouts.push(nRecid+" passages avec dépôt sur "+B.recidive.fenetreJours+" j"+(sc.rc===0&&!o.depotSol&&B.recidive.seulementSiDepot?" (sans pénalité : rien au sol aujourd'hui)":""));
     B=b0; LCOUR=l0; FENETRE_PASSAGE=f0;
     parSite[site].flux.push({flux,niveau,horsRef,sc,bar:infoVersion(h0),detail:bouts.join(" · "),ts:o.ts,test:o.test,
@@ -474,7 +504,9 @@ export function passagesParSite(REF,obs){
     });
     lots.forEach(lot=>{
       const parFlux={};
-      lot.obs.forEach(o=>{const p=parFlux[o.flux]; if(!p||new Date(o.ts)>new Date(p.ts)) parFlux[o.flux]=o});
+      const groupes={};
+      lot.obs.forEach(o=>{(groupes[o.flux]=groupes[o.flux]||[]).push(o)});
+      Object.keys(groupes).forEach(fl=>{parFlux[fl]=fusionPassage(groupes[fl])});
       let pts=null,pire=null,depot=false,crit=null;
       Object.values(parFlux).forEach(o=>{
         if(o.depotSol) depot=true;
