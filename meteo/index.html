@@ -127,7 +127,12 @@ section{margin-top:40px}
 /* Frise des passages : une bande par îlot, un carré par passage. */
 .frise{display:grid;gap:16px}
 .bac{display:inline-flex;flex-direction:column;align-items:center;gap:1px}.bac-pct{font:600 .7rem var(--mono);color:var(--ink-2)}
-.legende{margin:-4px 0 14px;padding:10px 12px;border-radius:10px;background:var(--bg-2,#f4f1ea);font-size:.8rem;line-height:1.5;color:var(--ink-2)}
+.legende{margin:-6px 0 12px;font-size:.8rem;line-height:1.45;color:var(--ink-2)}
+.legende summary{display:inline-flex;align-items:center;gap:4px;cursor:pointer;list-style:none;padding:4px 10px;border-radius:999px;border:1px solid var(--line,#ddd);font-weight:600;font-size:.78rem;color:var(--ink-2)}
+.legende summary::-webkit-details-marker{display:none}
+.legende[open] summary{margin-bottom:6px}
+.legende ul{margin:0;padding:8px 12px 8px 26px;border-radius:10px;background:var(--bg-2,#f4f1ea)}
+.legende li{margin:1px 0}
 .frow2{display:grid;grid-template-columns:170px 1fr;gap:14px;align-items:start}
 @media (max-width:560px){.frow2{grid-template-columns:1fr;gap:6px}}
 .fr-code{font-family:var(--mono);font-size:.7rem;color:var(--ink-3);letter-spacing:.04em}
@@ -137,6 +142,11 @@ section{margin-top:40px}
 .fr-sq{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;color:#fff;font-family:var(--mono);font-weight:600;font-size:.92rem;position:relative}
 .fr-sq.depot::after{content:"";position:absolute;right:-2px;top:-2px;width:9px;height:9px;border-radius:50%;background:var(--crit);border:2px solid var(--surface)}
 .fr-dt{font-family:var(--mono);font-size:.63rem;color:var(--ink-3)}
+/* Remplissage du passage sous chaque carré de la frise : mini-jauge + %. */
+.fr-rp{display:block;width:34px;height:5px;border-radius:3px;background:var(--bg-2,#ece8df);overflow:hidden;margin-top:-1px}
+.fr-rp i{display:block;height:100%;border-radius:3px}
+.fr-pc{font-family:var(--mono);font-size:.6rem;color:var(--ink-2);margin-top:-3px}
+.fd-rp{display:flex;align-items:center;gap:8px;margin:-2px 0 10px;font-size:.8rem;color:var(--ink-2)}
 .fr-cell:hover .fr-sq,.fr-cell:focus-visible .fr-sq{outline:2px solid var(--ink-2);outline-offset:2px}
 .fr-sum{font-size:.74rem;color:var(--ink-3);margin-top:7px}
 button.fr-cell{appearance:none;background:none;border:0;padding:0;font:inherit;cursor:pointer}
@@ -358,9 +368,15 @@ details[open] summary{margin-bottom:8px}
     <h2>État des îlots</h2>
     <p>Cliquez le détail d'un îlot pour voir le raisonnement flux par flux.</p>
   </div>
-  <p class="legende"><b>☀️ La météo</b> (soleil, éclaircies, pluie, orage) : l'état du jour, c'est-à-dire le plus mauvais constat parmi la propreté au sol et le remplissage.
-    <br><b>🗑 La poubelle</b> : la jauge de remplissage du site, c'est-à-dire la part de conteneurs pleins ou bloqués, tous flux confondus. Le couvercle s'entrouvre aux deux tiers et déborde quand tout est plein. La lettre à côté est le Bac-Score (propreté, remplissage, récidive).
-    <br><b>Conteneurs non photographiés</b> : rien ne dit qu'ils sont pleins, ils comptent comme disponibles (c'est indiqué dans le détail de chaque flux).</p>
+  <details class="legende">
+    <summary>ⓘ Lire les icônes</summary>
+    <ul>
+      <li><b>☀️ Météo</b> : l'état du jour (propreté au sol et remplissage, le pire des deux).</li>
+      <li><b>🗑 Poubelle</b> : remplissage du site ; le couvercle déborde quand tout est plein.</li>
+      <li><b>Lettre</b> : le Bac-Score (A à E).</li>
+      <li>Un conteneur non photographié compte comme disponible.</li>
+    </ul>
+  </details>
   <div class="grid" id="sites"></div>
 </section>
 
@@ -543,7 +559,10 @@ function rendu(){
   (function(){
     const box=document.getElementById('alertes-commune'); if(!box) return;
     const tri=c=>'<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" style="flex:none"><path d="M12 2.5 1.5 21h21L12 2.5z" fill="'+c+'"/><path d="M12 9.5v5M12 17.6v.2" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>';
-    const noirs=sites.filter(s=>s.L&&(s.L.l==='D'||s.L.l==='E'));
+    /* Point noir : seulement si le relevé qui l'a noté D ou E date d'aujourd'hui.
+       Sans nouveau relevé, l'alerte tombe le lendemain (la carte de l'îlot garde sa note). */
+    const auj=new Date().toDateString();
+    const noirs=sites.filter(s=>s.L&&(s.L.l==='D'||s.L.l==='E')&&s.dernier&&new Date(s.dernier).toDateString()===auj);
     const retard=sites.filter(s=>!s.dernier||jours(s.dernier)>JOURS_ALERTE).sort((a,b)=>(a.dernier||'').localeCompare(b.dernier||''));
     let h='';
     if(noirs.length) h+='<div class="al rouge" role="alert">'+tri('#B3261E')+'<div><b>'+noirs.length+' point'+(noirs.length>1?'s':'')+' noir'+(noirs.length>1?'s':'')+' (Bac-Score D ou E)</b><br>'
@@ -785,9 +804,17 @@ document.getElementById('sites').innerHTML = sites.map(s=>{
     if(deja){ det.hidden=true; det.innerHTML=''; return; }
     const l=(FRISE[b.dataset.site]||[])[+b.dataset.i]; if(!l) return;
     b.setAttribute('aria-expanded','true');
-    det.innerHTML=detailPassage(l); det.hidden=false;
+    det.innerHTML=detailPassage(l,b.dataset.site); det.hidden=false;
   };
-  function detailPassage(l){
+  /* Remplissage du site pour un passage : même calcul que la jauge de la
+     carte de l'îlot, mais sur les seuls constats de ce passage. */
+  function remplLot(site,l){
+    if(l._rp!==undefined) return l._rp;
+    let r=null; try{ const x=calcule(l.obs).find(y=>y.site===site); r=x&&x.remplissage||null; }catch(e){}
+    return l._rp=r;
+  }
+  const couleurTaux=t=>t>=1?'var(--sE)':t>=2/3?'var(--sD)':t>=1/3?'var(--sC)':t>0?'var(--sB)':'var(--sA)';
+  function detailPassage(l,site){
     const col=l.L?'var('+l.L.var+')':'var(--sOff)';
     const ids=[...new Set(l.obs.map(o=>o.photo).filter(Boolean))];
     const photos=ids.map(id=>{
@@ -820,6 +847,7 @@ document.getElementById('sites').innerHTML = sites.map(s=>{
     const titre=(l.L?'Bac-Score '+l.L.l+' — '+l.L.lab+' · '+l.pts+' point'+(l.pts>1?'s':''):'Non noté')+' · '+dateFR(l.fin)+(l.bar&&l.bar.nom?' · barème « '+l.bar.nom+' »':'');
     const agDL=ids.map(id=>agentPhoto(id,l.obs)).filter(Boolean), agD=agDL.length>0;
     return '<div class="fd-t"><span class="fd-l" style="background:'+col+'">'+(l.L?l.L.l:'?')+(agD?' '+bonhomme(agDL):'')+'</span><span>'+esc(titre)+(agD?' · signal de l\'agent':'')+'</span></div>'
+      +(()=>{ const r=remplLot(site,l); return '<div class="fd-rp">'+bacIcon(r,30)+'<span>'+esc(txtRemplissage(r))+'</span></div>'; })()
       +(photos?'<div class="fd-ph">'+photos+'</div>':'<p class="fd-v">Pas de photo pour ce passage.</p>')
       +'<ul class="fd-f">'+constats+'</ul>';
   }
@@ -831,10 +859,14 @@ document.getElementById('sites').innerHTML = sites.map(s=>{
       const jj=new Date(l.fin).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
       const titre=(l.L?'Bac-Score '+l.L.l+' — '+l.L.lab+' · '+l.pts+' point'+(l.pts>1?'s':'')
                      :'Non noté')+' · '+dateFR(l.fin)+(l.depot?' · dépôt au sol':'')
-                     +([...new Set(l.obs.map(o=>o.photo).filter(Boolean))].some(id=>agentPhoto(id,l.obs))?' · signal de l\'agent':'');
+                     +([...new Set(l.obs.map(o=>o.photo).filter(Boolean))].some(id=>agentPhoto(id,l.obs))?' · signal de l\'agent':'')
+                     +(()=>{ const r=remplLot(s.site,l); return r?' · remplissage '+Math.round(100*r.taux)+' %':''; })();
       const agL=[...new Set(l.obs.map(o=>o.photo).filter(Boolean))].map(id=>agentPhoto(id,l.obs)).filter(Boolean);
+      const rp=remplLot(s.site,l), pc=rp?Math.round(100*rp.taux):null;
+      const jauge=rp?'<span class="fr-rp"><i style="width:'+Math.max(pc,4)+'%;background:'+couleurTaux(rp.taux)+'"></i></span><span class="fr-pc">'+pc+' %</span>'
+                    :'<span class="fr-rp" style="opacity:.4"></span><span class="fr-pc">—</span>';
       const inner='<span class="fr-sq'+(l.depot?' depot':'')+'" style="background:'+col+'">'
-        +(l.L?l.L.l:'?')+(agL.length?'<span class="fr-ag '+classeAgent(agL)+'" title="'+esc('Signal de l\'agent : '+[...new Set(agL.map(a=>a.tag))].join(', '))+'">👤</span>':'')+'</span><span class="fr-dt">'+jj+'</span>';
+        +(l.L?l.L.l:'?')+(agL.length?'<span class="fr-ag '+classeAgent(agL)+'" title="'+esc('Signal de l\'agent : '+[...new Set(agL.map(a=>a.tag))].join(', '))+'">👤</span>':'')+'</span><span class="fr-dt">'+jj+'</span>'+jauge;
       return l.photo
         ? '<button type="button" class="fr-cell" data-site="'+esc(s.site)+'" data-i="'+i+'" aria-expanded="false" title="'+esc(titre)+'" aria-label="'+esc(titre)+'">'+inner+'</button>'
         : '<button type="button" class="fr-cell" data-site="'+esc(s.site)+'" data-i="'+i+'" aria-expanded="false" title="'+esc(titre)+'" aria-label="'+esc(titre)+'">'+inner+'</button>';
