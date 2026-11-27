@@ -372,6 +372,14 @@ details[open] summary{margin-bottom:8px}
       s.call(ls, P + "pav-idb-a-migrer", a_moi ? "proprio" : "prefixe");
       s.call(ls, P + "pav-espace", "1");
     }
+    /* V1.5.13 : la reprise de la V1.5.12 a pu ramener ici les points d'une autre commune
+       (cache du référentiel, points validés ou à vérifier gardés sur le téléphone). Ces
+       caches se reconstruisent depuis le serveur : on les vide une fois. Le code, les
+       réglages et les photos en attente sont gardés. */
+    if (g.call(ls, P + "pav-espace") !== "2") {
+      ["pav-referentiel", "pav-valides", "pav-averifier", "pav-derniers", "pav-faits", "pav-pleins"].forEach(function (k) { r.call(ls, P + k); });
+      s.call(ls, P + "pav-espace", "2");
+    }
   } catch (e) {}
   S.getItem = function (k) { return g.call(this, cle(this, k)); };
   S.setItem = function (k, v) { return s.call(this, cle(this, k), v); };

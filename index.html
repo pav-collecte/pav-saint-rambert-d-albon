@@ -749,6 +749,14 @@ fois confirmés sur place par un agent. Masqué quand il n'y en a pas. -->
       s.call(ls, P + "pav-idb-a-migrer", a_moi ? "proprio" : "prefixe");
       s.call(ls, P + "pav-espace", "1");
     }
+    /* V1.5.13 : la reprise de la V1.5.12 a pu ramener ici les points d'une autre commune
+       (cache du référentiel, points validés ou à vérifier gardés sur le téléphone). Ces
+       caches se reconstruisent depuis le serveur : on les vide une fois. Le code, les
+       réglages et les photos en attente sont gardés. */
+    if (g.call(ls, P + "pav-espace") !== "2") {
+      ["pav-referentiel", "pav-valides", "pav-averifier", "pav-derniers", "pav-faits", "pav-pleins"].forEach(function (k) { r.call(ls, P + k); });
+      s.call(ls, P + "pav-espace", "2");
+    }
   } catch (e) {}
   S.getItem = function (k) { return g.call(this, cle(this, k)); };
   S.setItem = function (k, v) { return s.call(this, cle(this, k), v); };
@@ -866,6 +874,8 @@ async function chargerReferentiel() {
     const r = await fetch(url, { headers: { accept: "application/json" }, cache: "no-cache" });
     if (!r.ok) return;
     const d = await r.json();
+    // Garde-fou : un référentiel d'une autre commune n'est jamais pris.
+    if (d && d.commune && CONF.commune && CONF.commune.nom && String(d.commune).trim().toLowerCase() !== String(CONF.commune.nom).trim().toLowerCase()) return;
     majDerniers(d);
     const sites = sitesDepuis(d);
     if (!sites.length) return;                         // jamais effacer sur une réponse vide
