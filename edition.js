@@ -54,6 +54,7 @@ try { var a = JSON.parse(lire("pav-admin") || "null"); return !!(a && a.admin &&
         var c = String(r.site || "").toUpperCase(); if (!c) return;
         var s = POINTS[c] || (POINTS[c] = { code: c, nom: String(r.nom || c), lat: Number(r.lat), lon: Number(r.lon), u: {} });
         if (r.flux) s.u[r.flux] = (s.u[r.flux] || 0) + Math.max(0, Math.round(Number(r.nbUnites) || 0));
+        if (r.latO && r.lonO) { s.latO = Number(r.latO); s.lonO = Number(r.lonO); }
       });
     });
   }
@@ -209,6 +210,10 @@ try { var a = JSON.parse(lire("pav-admin") || "null"); return !!(a && a.admin &&
 
   function formulaire(f, p) {
     var st = { nom: p.nom, u: Object.assign({}, p.u), pos: "carte", lat: "", lon: "" };
+    /* Position d'origine gardée par le serveur (point « à vérifier » de la console) :
+       on peut y revenir si la validation a pris une mauvaise position. */
+    var aOrigine = isFinite(p.latO) && isFinite(p.lonO) && p.latO && p.lonO
+      && (Math.abs(p.latO - p.lat) > 1e-6 || Math.abs(p.lonO - p.lon) > 1e-6);
     var flux = Object.keys(p.u); USUELS.forEach(function (k) { if (flux.indexOf(k) < 0) flux.push(k); });
     var box = f.querySelector(".pav-ed");
     function dessiner() {
@@ -221,10 +226,12 @@ try { var a = JSON.parse(lire("pav-admin") || "null"); return !!(a && a.admin &&
         + '<span class="t">Position</span>'
         + '<label class="r"><input type="radio" name="ed-pos" value="carte"' + (st.pos === "carte" ? " checked" : "") + '> Garder la position enregistrée</label>'
         + '<label class="r"><input type="radio" name="ed-pos" value="gps"' + (st.pos === "gps" ? " checked" : "") + '> Ma position actuelle (je suis devant l\'îlot)</label>'
+        + (aOrigine ? '<label class="r"><input type="radio" name="ed-pos" value="origine"' + (st.pos === "origine" ? " checked" : "") + '> Revenir à la position d\'origine (proposée par la console)</label>' : '')
         + '<label class="r"><input type="radio" name="ed-pos" value="saisie"' + (st.pos === "saisie" ? " checked" : "") + '> Saisir des coordonnées</label>'
         + (st.pos === "saisie" ? '<div class="c"><input id="ed-lat" inputmode="decimal" placeholder="Latitude" value="' + esc(st.lat) + '"><input id="ed-lon" inputmode="decimal" placeholder="Longitude" value="' + esc(st.lon) + '"></div>'
           + '<p class="aide">Astuce : sur Google Maps, clic droit sur l\'îlot, puis clic sur les coordonnées pour les copier ; colle-les dans « Latitude ».</p>' : "")
         + (Number.isFinite(p.lat) && p.lat ? '<p class="aide"><a href="https://www.openstreetmap.org/?mlat=' + p.lat + '&amp;mlon=' + p.lon + '#map=19/' + p.lat + '/' + p.lon + '" target="_blank" rel="noopener">Voir la position enregistrée sur la carte</a></p>' : "")
+        + (aOrigine ? '<p class="aide"><a href="https://www.openstreetmap.org/?mlat=' + p.latO + '&amp;mlon=' + p.lonO + '#map=19/' + p.latO + '/' + p.lonO + '" target="_blank" rel="noopener">Voir la position d\'origine sur la carte</a></p>' : "")
         + '<div class="msg" aria-live="polite"></div>'
         + '<div class="act"><button type="button" class="non">Annuler</button><button type="button" class="ok">Enregistrer</button></div>'
         + (aServi(p.code) ? '<p class="aide" style="margin-top:14px">Ce point a déjà des relevés : il ne peut pas être retiré depuis l\'appli (seulement depuis la console).</p>' : '<div class="retrait">' + (st.retrait
@@ -287,6 +294,7 @@ try { var a = JSON.parse(lire("pav-admin") || "null"); return !!(a && a.admin &&
       var champs = { site_code: p.code, nom: nom, unites: JSON.stringify(unites) };
       var etape = Promise.resolve();
       if (st.pos === "carte") champs.position = "carte";
+      else if (st.pos === "origine") { champs.lat = p.latO; champs.lon = p.lonO; }
       else if (st.pos === "saisie") {
         var lat = Number(String(st.lat).replace(",", ".")), lon = Number(String(st.lon).replace(",", "."));
         if (!isFinite(lat) || !isFinite(lon) || !lat || !lon || Math.abs(lat) > 90 || Math.abs(lon) > 180) return dire("Coordonnées incomplètes : latitude et longitude en degrés décimaux (ex. 45.24439 et 4.84386).", "err");
