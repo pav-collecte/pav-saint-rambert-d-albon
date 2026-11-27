@@ -590,10 +590,6 @@ fois confirmés sur place par un agent. Masqué quand il n'y en a pas. -->
 <p class="hint" id="hint">Photographie chaque point, même quand tout va bien.</p>
   <!-- Signal « plein » : bandeau fixé en bas de l'écran, 8 s après chaque photo, sans appui rien n'est signalé. -->
   <div class="plein-b" id="plein-b" role="status" hidden></div>
-  <button type="button" class="shoot second" id="galerie">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
-    <span>Importer depuis la galerie</span>
-  </button>
 
   <div class="imp" id="import" hidden>
     <span class="imp-t" id="imp-t">Photos à associer</span>
@@ -652,6 +648,12 @@ fois confirmés sur place par un agent. Masqué quand il n'y en a pas. -->
 
   <p class="note" id="note"></p>
 
+  <!-- Import depuis la galerie : rarement utilisé, donc en pied de page avec les autres
+       actions occasionnelles. Le panneau des photos à placer, lui, reste près des points. -->
+  <button type="button" class="share-l" id="galerie">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+    <span>Importer depuis la galerie</span>
+  </button>
   <!-- Partage : action occasionnelle, donc en pied de page — la zone du pouce
        reste réservée à la photo. -->
   <button type="button" class="share-l" id="share">
@@ -1741,7 +1743,7 @@ async function importerGalerie(files) {
 async function viderPlaces(trop = -1) {
   const prets = aImporter.filter(x => x.site);
   aImporter = aImporter.filter(x => !x.site);
-  if (aImporter.length) rendreImport(trop);
+  if (aImporter.length) { rendreImport(trop); $("import").scrollIntoView({ behavior: "smooth", block: "center" }); }
   else { $("import").hidden = true; $("imp-list").innerHTML = ""; }
   if (prets.length) await enregistrerImport(prets);
 }
@@ -2010,11 +2012,11 @@ if (it.propre) fd.append("propre", it.propre); // îlot signalé propre par l'ag
          et la photo reste en file — elle partira une fois le code corrigé. */
       if (r.status === 401 || r.status === 403) {
         dernierEtat = "Code d'accès refusé — vérifie-le auprès de la mairie";
-        armer(false);
+        armer(false); sonEchec();
         ouvrirCode("Ce code a été refusé par le serveur.");
         break;
       }
-      if (!r.ok) { dernierEtat = `Le serveur a répondu ${r.status} — nouvelle tentative plus tard`; break; }
+      if (!r.ok) { dernierEtat = `Le serveur a répondu ${r.status} — nouvelle tentative plus tard`; sonEchec(); break; }
       await qDel(it.uuid);
       await noterEnvoyee(it);
       /* La photo est partie : sa vignette quitte l'îlot, mais le passage
@@ -2025,9 +2027,9 @@ if (it.propre) fd.append("propre", it.propre); // îlot signalé propre par l'ag
       majFile();
     }
     if (!dernierEtat && envoyees) dernierEtat = `${envoyees} photo${envoyees > 1 ? "s" : ""} envoyée${envoyees > 1 ? "s" : ""}`;
-    if (!(await qAll()).length) armer(false);   // file vide : il faudra réarmer
+    if (!(await qAll()).length) { armer(false); if (envoyees) sonValidation(); }   // file vide : il faudra réarmer
   } catch (e) {
-    dernierEtat = "Réseau indisponible — nouvelle tentative plus tard";
+    dernierEtat = "Réseau indisponible — nouvelle tentative plus tard"; sonEchec();
   } finally {
     envoiEnCours = false; envoiTotal = 0; envoiFaites = 0;
     await rechargerVignettes();
@@ -2035,9 +2037,53 @@ if (it.propre) fd.append("propre", it.propre); // îlot signalé propre par l'ag
   }
 }
 
+/* Son de validation quand toutes les photos sont parties : deux notes montantes et une
+   courte vibration. Le navigateur n'autorise le son qu'après un geste de l'agent : le
+   contexte audio est ouvert à l'appui sur « Envoyer », le son joue à la fin de l'envoi. */
+let AUDIO = null;
+function debloquerSon() {
+  try { AUDIO = AUDIO || new (window.AudioContext || window.webkitAudioContext)(); if (AUDIO.state === "suspended") AUDIO.resume(); } catch {}
+}
+/* Son d'échec : deux notes descendantes, plus graves, et une vibration plus longue.
+   Une seule fois par appui sur « Envoyer » : les nouvelles tentatives automatiques
+   (toutes les 30 s, hors ligne) ne sonnent pas à chaque fois. */
+let sonEchecJoue = true;
+function sonEchec() {
+  if (sonEchecJoue) return; sonEchecJoue = true;
+  try { if (navigator.vibrate) navigator.vibrate([120, 80, 120]); } catch {}
+  try {
+    if (!AUDIO || document.visibilityState !== "visible") return;
+    const t = AUDIO.currentTime + 0.02;
+    [[392, 0], [262, 0.18]].forEach(([f, d]) => {
+      const o = AUDIO.createOscillator(), g = AUDIO.createGain();
+      o.type = "triangle"; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t + d);
+      g.gain.exponentialRampToValueAtTime(0.35, t + d + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.32);
+      o.connect(g); g.connect(AUDIO.destination); o.start(t + d); o.stop(t + d + 0.36);
+    });
+  } catch {}
+}
+function sonValidation() {
+  try { if (navigator.vibrate) navigator.vibrate(40); } catch {}
+  try {
+    if (!AUDIO || document.visibilityState !== "visible") return;
+    const t = AUDIO.currentTime + 0.02;
+    [[880, 0], [1318.5, 0.13]].forEach(([f, d]) => {
+      const o = AUDIO.createOscillator(), g = AUDIO.createGain();
+      o.type = "sine"; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t + d);
+      g.gain.exponentialRampToValueAtTime(0.3, t + d + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.28);
+      o.connect(g); g.connect(AUDIO.destination); o.start(t + d); o.stop(t + d + 0.32);
+    });
+  } catch {}
+}
+
 // L'appui arme l'envoi : à partir de là, la file se vide seule si le réseau
 // revient. Tant qu'il n'a pas eu lieu, rien ne quitte le téléphone.
 $("q-send").addEventListener("click", async () => {
+  debloquerSon(); sonEchecJoue = false;
   if (!envoiEnCours) await nouveauLot();
   dernierEtat = ""; armer(true); vider(); demanderSync();
 });
