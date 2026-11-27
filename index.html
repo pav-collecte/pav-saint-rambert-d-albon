@@ -719,6 +719,43 @@ fois confirmés sur place par un agent. Masqué quand il n'y en a pas. -->
 </div>
 
 <script>
+/* Mémoire séparée par commune. Tant qu'une commune n'a pas son adresse propre, elle est
+   publiée sous pav-collecte.github.io/pav-<commune>/ : toutes ces communes partagent la
+   même origine, donc le même localStorage et la même base IndexedDB. Sans cloison, ouvrir
+   l'appli d'une commune écrasait le code, les points et la file d'envoi d'une autre.
+   Ici, sur une adresse partagée, chaque clé « pav-… » est rangée sous « pav-<commune>: ».
+   Première ouverture : les anciens réglages reviennent à la commune qui les avait
+   écrits en dernier (d'après pav-config), puis sont effacés de l'espace commun ; les
+   photos en attente reviennent chacune à sa commune, d'après le préfixe du point. */
+(function () {
+  if (window.__pavEspace !== undefined) return;
+  var seg = /\.github\.io$/i.test(location.hostname) ? (location.pathname.split("/")[1] || "") : "";
+  window.__pavEspace = seg;
+  if (!seg) return;
+  var ls; try { ls = window.localStorage; } catch (e) { return; }
+  var S = Storage.prototype, g = S.getItem, s = S.setItem, r = S.removeItem, P = seg + ":";
+  var cle = function (st, k) { return st === ls && /^pav-[^:]*$/.test(String(k)) ? P + k : k; };
+  try {
+    if (g.call(ls, P + "pav-espace") === null) {
+      var norm = function (v) { return String(v || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); };
+      var c = null; try { c = JSON.parse(g.call(ls, "pav-config") || "null"); } catch (e) {}
+      var a_moi = !!(c && c.commune && "pav-" + norm(c.commune.nom) === seg.toLowerCase());
+      if (a_moi) {
+        var cles = []; for (var i = 0; i < ls.length; i++) { var k = ls.key(i); if (/^pav-[^:]*$/.test(k)) cles.push(k); }
+        cles.forEach(function (k) { if (g.call(ls, P + k) === null) s.call(ls, P + k, g.call(ls, k)); r.call(ls, k); });
+      }
+      /* La file d'envoi est reprise par préfixe de point (ex. ADT-…) : chaque commune
+         récupère ses propres photos, quelle que soit celle qui a écrit en dernier. */
+      s.call(ls, P + "pav-idb-a-migrer", a_moi ? "proprio" : "prefixe");
+      s.call(ls, P + "pav-espace", "1");
+    }
+  } catch (e) {}
+  S.getItem = function (k) { return g.call(this, cle(this, k)); };
+  S.setItem = function (k, v) { return s.call(this, cle(this, k), v); };
+  S.removeItem = function (k) { return r.call(this, cle(this, k)); };
+})();
+</script>
+<script>
 /* ──────────────────────────────────────────────────────────────────────────
    RIEN D'ALBON DANS CE FICHIER.
 
@@ -911,8 +948,38 @@ function identifierSite(pos) {
 }
 
 /* ── file hors ligne (IndexedDB, repli en mémoire) ──────────────────────── */
-const DB="pav", ST="file", CFG="config", VG="vignette"; let memoire = [];
-const idb = () => new Promise((ok,ko) => {
+const ESPACE = window.__pavEspace || "";
+const DB = ESPACE ? "pav@" + ESPACE : "pav", ST="file", CFG="config", VG="vignette"; let memoire = [];
+/* Adresse partagée : la file et les réglages de la commune vivent dans sa propre base.
+   Une seule fois, on y reprend le contenu de l'ancienne base commune « pav » si ces
+   données étaient les siennes (voir le cloisonnement en tête de page). */
+let migIdb = null;
+const idb = () => {
+  let a = ""; try { a = ESPACE ? (localStorage.getItem("pav-idb-a-migrer") || "") : ""; } catch {}
+  if (!a) return idbBrut();
+  if (!migIdb) migIdb = migrerIdb(a === "proprio").then(() => { try { localStorage.removeItem("pav-idb-a-migrer"); } catch {} }, () => {});
+  return migIdb.then(idbBrut);
+};
+async function migrerIdb(proprio) {
+  /* Préfixe de la commune : lu dans son config.json (CONF peut ne pas être encore chargé). */
+  let pref = "";
+  try { const c = await fetch("config.json", { cache: "no-store" }).then(r => r.json()); pref = String((c.commune && c.commune.prefixeCode) || "").toUpperCase(); } catch {}
+  if (!pref && !proprio) throw new Error("préfixe inconnu : on réessaiera");
+  const aMoi = v => { const sc = String((v && v.site_code) || "").toUpperCase(); return sc ? (!!pref && sc.indexOf(pref + "-") === 0) : proprio; };
+  const neuf = await idbBrut();
+  const vieux = await new Promise(ok => { const r = indexedDB.open("pav"); r.onupgradeneeded = () => { try { r.transaction.abort(); } catch {} }; r.onsuccess = () => ok(r.result); r.onerror = () => ok(null); });
+  if (!vieux) { neuf.close(); return; }
+  for (const st of [ST, CFG, VG]) {
+    if (!vieux.objectStoreNames.contains(st)) continue;
+    const lu = await new Promise((ok, ko) => { const o = vieux.transaction(st, "readonly").objectStore(st); const a = o.getAll(), b = o.getAllKeys(); let n = 0; const f = () => { if (++n === 2) ok({ v: a.result, k: b.result }); }; a.onsuccess = f; b.onsuccess = f; a.onerror = b.onerror = () => ko(); });
+    const pris = st === CFG ? (proprio ? lu.k.map((k, i) => i) : []) : lu.v.map((v, i) => aMoi(v) ? i : -1).filter(i => i >= 0);
+    if (!pris.length) continue;
+    await new Promise((ok, ko) => { const t = neuf.transaction(st, "readwrite"), o = t.objectStore(st); pris.forEach(i => st === CFG ? o.put(lu.v[i], lu.k[i]) : o.put(lu.v[i])); t.oncomplete = ok; t.onerror = () => ko(t.error); });
+    await new Promise(ok => { const t = vieux.transaction(st, "readwrite"), o = t.objectStore(st); pris.forEach(i => o.delete(lu.k[i])); t.oncomplete = ok; t.onerror = ok; });
+  }
+  vieux.close(); neuf.close();
+}
+const idbBrut = () => new Promise((ok,ko) => {
   const r = indexedDB.open(DB,3);
   r.onupgradeneeded = () => {
     const d = r.result;

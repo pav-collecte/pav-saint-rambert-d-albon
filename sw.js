@@ -45,7 +45,10 @@ self.addEventListener("fetch", e => {
 
 /* ── accès à la file, partagée avec la page ─────────────────────────────── */
 
-const DB = "pav", ST = "file", CFG = "config";
+/* Même cloison que la page : sur l'adresse partagée pav-collecte.github.io, chaque
+   commune (/pav-<commune>/) a sa propre base. */
+const ESPACE = /\.github\.io$/i.test(self.location.hostname) ? (self.location.pathname.split("/")[1] || "") : "";
+const DB = ESPACE ? "pav@" + ESPACE : "pav", ST = "file", CFG = "config";
 
 const idb = () => new Promise((ok, ko) => {
   /* Sans numéro de version : la page a fait monter la base en version 3 (magasin

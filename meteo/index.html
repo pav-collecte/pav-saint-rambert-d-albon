@@ -342,6 +342,43 @@ details[open] summary{margin-bottom:8px}
     style="width:100%;height:150px;border:1px solid var(--line);border-radius:12px;display:block;background:#fff"></iframe>
   <div id="alertes-commune" class="al-box" hidden></div>
   <script>
+/* Mémoire séparée par commune. Tant qu'une commune n'a pas son adresse propre, elle est
+   publiée sous pav-collecte.github.io/pav-<commune>/ : toutes ces communes partagent la
+   même origine, donc le même localStorage et la même base IndexedDB. Sans cloison, ouvrir
+   l'appli d'une commune écrasait le code, les points et la file d'envoi d'une autre.
+   Ici, sur une adresse partagée, chaque clé « pav-… » est rangée sous « pav-<commune>: ».
+   Première ouverture : les anciens réglages reviennent à la commune qui les avait
+   écrits en dernier (d'après pav-config), puis sont effacés de l'espace commun ; les
+   photos en attente reviennent chacune à sa commune, d'après le préfixe du point. */
+(function () {
+  if (window.__pavEspace !== undefined) return;
+  var seg = /\.github\.io$/i.test(location.hostname) ? (location.pathname.split("/")[1] || "") : "";
+  window.__pavEspace = seg;
+  if (!seg) return;
+  var ls; try { ls = window.localStorage; } catch (e) { return; }
+  var S = Storage.prototype, g = S.getItem, s = S.setItem, r = S.removeItem, P = seg + ":";
+  var cle = function (st, k) { return st === ls && /^pav-[^:]*$/.test(String(k)) ? P + k : k; };
+  try {
+    if (g.call(ls, P + "pav-espace") === null) {
+      var norm = function (v) { return String(v || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); };
+      var c = null; try { c = JSON.parse(g.call(ls, "pav-config") || "null"); } catch (e) {}
+      var a_moi = !!(c && c.commune && "pav-" + norm(c.commune.nom) === seg.toLowerCase());
+      if (a_moi) {
+        var cles = []; for (var i = 0; i < ls.length; i++) { var k = ls.key(i); if (/^pav-[^:]*$/.test(k)) cles.push(k); }
+        cles.forEach(function (k) { if (g.call(ls, P + k) === null) s.call(ls, P + k, g.call(ls, k)); r.call(ls, k); });
+      }
+      /* La file d'envoi est reprise par préfixe de point (ex. ADT-…) : chaque commune
+         récupère ses propres photos, quelle que soit celle qui a écrit en dernier. */
+      s.call(ls, P + "pav-idb-a-migrer", a_moi ? "proprio" : "prefixe");
+      s.call(ls, P + "pav-espace", "1");
+    }
+  } catch (e) {}
+  S.getItem = function (k) { return g.call(this, cle(this, k)); };
+  S.setItem = function (k, v) { return s.call(this, cle(this, k), v); };
+  S.removeItem = function (k) { return r.call(this, cle(this, k)); };
+})();
+</script>
+<script>
     (function () {
       var f = document.getElementById("encart-global");
       function ajuster() { try { var d = f.contentDocument; if (d && d.body) f.style.height = Math.max(90, d.documentElement.scrollHeight) + "px"; } catch (e) {} }
