@@ -1950,13 +1950,20 @@ function verifierCodeCommune(pref) {
     poserCode("");
     setTimeout(() => ouvrirCode("Le code enregistré n'est pas un code " + deNom + " (" + pref + "-…). Saisis ton code d'accès."), 300);
   } else if (!CODE) {
-    let deja = false; try { deja = localStorage.getItem("pav-code-demande") === "1"; } catch {}
-    if (deja) return;
+    /* Tant qu'aucun code n'est enregistré, on le demande à chaque ouverture — et au
+       retour sur l'appli (l'agent a pu partir le copier ailleurs). */
     codeDemande = true;
-    try { localStorage.setItem("pav-code-demande", "1"); } catch {}
     setTimeout(() => ouvrirCode("Bienvenue ! Saisis le code d'accès donné par la mairie " + deNom + "."), 300);
   }
 }
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible" || CODE || !$("code-s").hidden) return;
+  const pref = (CONF.commune && CONF.commune.prefixeCode) || "";
+  if (!pref) return;
+  const n0 = (CONF.commune && CONF.commune.nom) || "";
+  const deNom = n0 ? (/^[aeiouyhàâéèêîôû]/i.test(n0) ? "d'" : "de ") + n0 : "de la commune";
+  ouvrirCode("Saisis le code d'accès donné par la mairie " + deNom + ".");
+});
 function masquerCode(masque) {
   $("code-i").type = masque ? "password" : "text";
   $("code-v").textContent = masque ? "Afficher" : "Masquer";
