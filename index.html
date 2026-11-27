@@ -2306,7 +2306,16 @@ async function verifierRole() {
     fd.append("commune", (CONF.commune && CONF.commune.nom) || "");
     fd.append("action", "role");
     const r = await fetch(url, { method: "POST", body: fd });
-    let j = null; try { j = await r.json(); } catch {}
+    const brut = await r.text().catch(() => "");
+    let j = null; try { j = JSON.parse(brut); } catch {}
+    /* Code supprimé ou désactivé depuis la console : le serveur le refuse dès
+       l'ouverture. On l'oublie et on demande le nouveau, au lieu de le garder. */
+    if (r.status === 401 && /code/i.test(brut)) {
+      ADMIN = null; try { localStorage.removeItem("pav-admin"); } catch {}
+      poserCode(""); majMode();
+      ouvrirCode("Ce code n'est plus valable (supprimé ou désactivé par la mairie). Saisis ton nouveau code d'accès.");
+      return;
+    }
     if (r.status === 401 || r.status === 403) ADMIN = { code: CODE, admin: false };
     else if (r.ok && j && j.ok) ADMIN = { code: CODE, admin: !!j.admin, nom: j.nom || "", init: j.initialisation !== false };
     else return;
