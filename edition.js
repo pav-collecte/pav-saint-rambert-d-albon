@@ -134,7 +134,11 @@ try { var a = JSON.parse(lire("pav-admin") || "null"); return !!(a && a.admin &&
     chargerPoints().catch(function () {}).then(function () {
       var p = POINTS[c];
       if (!p) { var loc = null; try { loc = SITES.find(function (s) { return s.code === c; }); } catch (e) {}
-        if (loc) { pointLocal(f, loc, false, false); return; } }
+        /* Point « à vérifier » validé sur ce téléphone : le serveur l'a déjà inscrit au
+           Référentiel, seul le fichier publié a du retard. On peut donc le modifier. */
+        var val = {}; try { val = JSON.parse(lire("pav-valides") || "{}") || {}; } catch (e) {}
+        if (loc && val[c] && val[c].site) { p = { code: c, nom: String(loc.nom || c), lat: Number(loc.lat), lon: Number(loc.lon), u: Object.assign({}, loc.postes || {}) }; }
+        else if (loc) { pointLocal(f, loc, false, false); return; } }
       if (!p) { f.querySelector(".pav-ed").innerHTML = '<h3>Îlot ' + esc(c) + '</h3><p class="sous">Introuvable dans le référentiel publié.</p><div class="act"><button type="button" class="non">Fermer</button></div>'; f.querySelector(".non").onclick = function () { f.remove(); }; return; }
       formulaire(f, p);
     });
