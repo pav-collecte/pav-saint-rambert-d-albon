@@ -1,0 +1,1122 @@
+{
+ "commune": "Saint-Rambert-d'Albon",
+ "departement": "26",
+ "maj": "2026-11-27T22:16:08Z",
+ "source": "classeur des relevés de Saint-Rambert-d'Albon",
+ "referentiel": [],
+ "aVerifier": [
+  {
+   "site": "SRA-01",
+   "nom": "Rue du Val d'Or",
+   "lat": 45.298737,
+   "lon": 4.813454,
+   "flux": "verre",
+   "nbUnites": 3
+  },
+  {
+   "site": "SRA-01",
+   "nom": "Rue du Val d'Or",
+   "lat": 45.298737,
+   "lon": 4.813454,
+   "flux": "ordures_menageres",
+   "nbUnites": 3
+  },
+  {
+   "site": "SRA-02",
+   "nom": "Place du 8 Mai 1945",
+   "lat": 45.292321,
+   "lon": 4.814871,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-02",
+   "nom": "Place du 8 Mai 1945",
+   "lat": 45.292321,
+   "lon": 4.814871,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-02",
+   "nom": "Place du 8 Mai 1945",
+   "lat": 45.292321,
+   "lon": 4.814871,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-03",
+   "nom": "Route de l'Enclos",
+   "lat": 45.287938,
+   "lon": 4.855568,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-03",
+   "nom": "Route de l'Enclos",
+   "lat": 45.287938,
+   "lon": 4.855568,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-03",
+   "nom": "Route de l'Enclos",
+   "lat": 45.287938,
+   "lon": 4.855568,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-03",
+   "nom": "Route de l'Enclos",
+   "lat": 45.287938,
+   "lon": 4.855568,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-03",
+   "nom": "Route de l'Enclos",
+   "lat": 45.287938,
+   "lon": 4.855568,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-03",
+   "nom": "Route de l'Enclos",
+   "lat": 45.287938,
+   "lon": 4.855568,
+   "flux": "textile",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-04",
+   "nom": "Route des Fouillouses",
+   "lat": 45.277012,
+   "lon": 4.828225,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-04",
+   "nom": "Route des Fouillouses",
+   "lat": 45.277012,
+   "lon": 4.828225,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-04",
+   "nom": "Route des Fouillouses",
+   "lat": 45.277012,
+   "lon": 4.828225,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-04",
+   "nom": "Route des Fouillouses",
+   "lat": 45.277012,
+   "lon": 4.828225,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-04",
+   "nom": "Route des Fouillouses",
+   "lat": 45.277012,
+   "lon": 4.828225,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-04",
+   "nom": "Route des Fouillouses",
+   "lat": 45.277012,
+   "lon": 4.828225,
+   "flux": "textile",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-05",
+   "nom": "Route des Fouillouses 2",
+   "lat": 45.27613,
+   "lon": 4.82871,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-05",
+   "nom": "Route des Fouillouses 2",
+   "lat": 45.27613,
+   "lon": 4.82871,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-06",
+   "nom": "Point OSM 6",
+   "lat": 45.277905,
+   "lon": 4.826603,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-06",
+   "nom": "Point OSM 6",
+   "lat": 45.277905,
+   "lon": 4.826603,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-06",
+   "nom": "Point OSM 6",
+   "lat": 45.277905,
+   "lon": 4.826603,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-06",
+   "nom": "Point OSM 6",
+   "lat": 45.277905,
+   "lon": 4.826603,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-06",
+   "nom": "Point OSM 6",
+   "lat": 45.277905,
+   "lon": 4.826603,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-06",
+   "nom": "Point OSM 6",
+   "lat": 45.277905,
+   "lon": 4.826603,
+   "flux": "textile",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-07",
+   "nom": "Route des Fouillouses 3",
+   "lat": 45.277989,
+   "lon": 4.829215,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-07",
+   "nom": "Route des Fouillouses 3",
+   "lat": 45.277989,
+   "lon": 4.829215,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-07",
+   "nom": "Route des Fouillouses 3",
+   "lat": 45.277989,
+   "lon": 4.829215,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-07",
+   "nom": "Route des Fouillouses 3",
+   "lat": 45.277989,
+   "lon": 4.829215,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-07",
+   "nom": "Route des Fouillouses 3",
+   "lat": 45.277989,
+   "lon": 4.829215,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-07",
+   "nom": "Route des Fouillouses 3",
+   "lat": 45.277989,
+   "lon": 4.829215,
+   "flux": "textile",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-08",
+   "nom": "Route des Fouillouses 4",
+   "lat": 45.277831,
+   "lon": 4.828592,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-08",
+   "nom": "Route des Fouillouses 4",
+   "lat": 45.277831,
+   "lon": 4.828592,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-08",
+   "nom": "Route des Fouillouses 4",
+   "lat": 45.277831,
+   "lon": 4.828592,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-08",
+   "nom": "Route des Fouillouses 4",
+   "lat": 45.277831,
+   "lon": 4.828592,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-08",
+   "nom": "Route des Fouillouses 4",
+   "lat": 45.277831,
+   "lon": 4.828592,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-08",
+   "nom": "Route des Fouillouses 4",
+   "lat": 45.277831,
+   "lon": 4.828592,
+   "flux": "textile",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-09",
+   "nom": "Route des Fouillouses 5",
+   "lat": 45.277036,
+   "lon": 4.829093,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-09",
+   "nom": "Route des Fouillouses 5",
+   "lat": 45.277036,
+   "lon": 4.829093,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-09",
+   "nom": "Route des Fouillouses 5",
+   "lat": 45.277036,
+   "lon": 4.829093,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-09",
+   "nom": "Route des Fouillouses 5",
+   "lat": 45.277036,
+   "lon": 4.829093,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-09",
+   "nom": "Route des Fouillouses 5",
+   "lat": 45.277036,
+   "lon": 4.829093,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-09",
+   "nom": "Route des Fouillouses 5",
+   "lat": 45.277036,
+   "lon": 4.829093,
+   "flux": "textile",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-10",
+   "nom": "Route des Fouillouses 6",
+   "lat": 45.277019,
+   "lon": 4.82867,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-10",
+   "nom": "Route des Fouillouses 6",
+   "lat": 45.277019,
+   "lon": 4.82867,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-10",
+   "nom": "Route des Fouillouses 6",
+   "lat": 45.277019,
+   "lon": 4.82867,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-10",
+   "nom": "Route des Fouillouses 6",
+   "lat": 45.277019,
+   "lon": 4.82867,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-10",
+   "nom": "Route des Fouillouses 6",
+   "lat": 45.277019,
+   "lon": 4.82867,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-10",
+   "nom": "Route des Fouillouses 6",
+   "lat": 45.277019,
+   "lon": 4.82867,
+   "flux": "textile",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-11",
+   "nom": "Route des Fouillouses 7",
+   "lat": 45.276336,
+   "lon": 4.829422,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-11",
+   "nom": "Route des Fouillouses 7",
+   "lat": 45.276336,
+   "lon": 4.829422,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-11",
+   "nom": "Route des Fouillouses 7",
+   "lat": 45.276336,
+   "lon": 4.829422,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-11",
+   "nom": "Route des Fouillouses 7",
+   "lat": 45.276336,
+   "lon": 4.829422,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-11",
+   "nom": "Route des Fouillouses 7",
+   "lat": 45.276336,
+   "lon": 4.829422,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-11",
+   "nom": "Route des Fouillouses 7",
+   "lat": 45.276336,
+   "lon": 4.829422,
+   "flux": "textile",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-12",
+   "nom": "Route des Fouillouses 8",
+   "lat": 45.277676,
+   "lon": 4.830103,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-12",
+   "nom": "Route des Fouillouses 8",
+   "lat": 45.277676,
+   "lon": 4.830103,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-12",
+   "nom": "Route des Fouillouses 8",
+   "lat": 45.277676,
+   "lon": 4.830103,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-12",
+   "nom": "Route des Fouillouses 8",
+   "lat": 45.277676,
+   "lon": 4.830103,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-12",
+   "nom": "Route des Fouillouses 8",
+   "lat": 45.277676,
+   "lon": 4.830103,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-12",
+   "nom": "Route des Fouillouses 8",
+   "lat": 45.277676,
+   "lon": 4.830103,
+   "flux": "textile",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-13",
+   "nom": "Route des Fouillouses 9",
+   "lat": 45.27821,
+   "lon": 4.828556,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-13",
+   "nom": "Route des Fouillouses 9",
+   "lat": 45.27821,
+   "lon": 4.828556,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-13",
+   "nom": "Route des Fouillouses 9",
+   "lat": 45.27821,
+   "lon": 4.828556,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-13",
+   "nom": "Route des Fouillouses 9",
+   "lat": 45.27821,
+   "lon": 4.828556,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-13",
+   "nom": "Route des Fouillouses 9",
+   "lat": 45.27821,
+   "lon": 4.828556,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-13",
+   "nom": "Route des Fouillouses 9",
+   "lat": 45.27821,
+   "lon": 4.828556,
+   "flux": "textile",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-14",
+   "nom": "Point OSM 14",
+   "lat": 45.278371,
+   "lon": 4.827265,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-14",
+   "nom": "Point OSM 14",
+   "lat": 45.278371,
+   "lon": 4.827265,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-14",
+   "nom": "Point OSM 14",
+   "lat": 45.278371,
+   "lon": 4.827265,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-14",
+   "nom": "Point OSM 14",
+   "lat": 45.278371,
+   "lon": 4.827265,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-14",
+   "nom": "Point OSM 14",
+   "lat": 45.278371,
+   "lon": 4.827265,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-14",
+   "nom": "Point OSM 14",
+   "lat": 45.278371,
+   "lon": 4.827265,
+   "flux": "textile",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-15",
+   "nom": "Point OSM 15",
+   "lat": 45.277666,
+   "lon": 4.827805,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-15",
+   "nom": "Point OSM 15",
+   "lat": 45.277666,
+   "lon": 4.827805,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-15",
+   "nom": "Point OSM 15",
+   "lat": 45.277666,
+   "lon": 4.827805,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-15",
+   "nom": "Point OSM 15",
+   "lat": 45.277666,
+   "lon": 4.827805,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-15",
+   "nom": "Point OSM 15",
+   "lat": 45.277666,
+   "lon": 4.827805,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-15",
+   "nom": "Point OSM 15",
+   "lat": 45.277666,
+   "lon": 4.827805,
+   "flux": "textile",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-16",
+   "nom": "Les Pommettes",
+   "lat": 45.287677,
+   "lon": 4.826528,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-16",
+   "nom": "Les Pommettes",
+   "lat": 45.287677,
+   "lon": 4.826528,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-16",
+   "nom": "Les Pommettes",
+   "lat": 45.287677,
+   "lon": 4.826528,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-16",
+   "nom": "Les Pommettes",
+   "lat": 45.287677,
+   "lon": 4.826528,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-16",
+   "nom": "Les Pommettes",
+   "lat": 45.287677,
+   "lon": 4.826528,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-16",
+   "nom": "Les Pommettes",
+   "lat": 45.287677,
+   "lon": 4.826528,
+   "flux": "textile",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-17",
+   "nom": "Le Clos de Milan",
+   "lat": 45.281299,
+   "lon": 4.819569,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-17",
+   "nom": "Le Clos de Milan",
+   "lat": 45.281299,
+   "lon": 4.819569,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-17",
+   "nom": "Le Clos de Milan",
+   "lat": 45.281299,
+   "lon": 4.819569,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-17",
+   "nom": "Le Clos de Milan",
+   "lat": 45.281299,
+   "lon": 4.819569,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-17",
+   "nom": "Le Clos de Milan",
+   "lat": 45.281299,
+   "lon": 4.819569,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-17",
+   "nom": "Le Clos de Milan",
+   "lat": 45.281299,
+   "lon": 4.819569,
+   "flux": "textile",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-18",
+   "nom": "Hameau de la Tulandière",
+   "lat": 45.289022,
+   "lon": 4.813251,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-18",
+   "nom": "Hameau de la Tulandière",
+   "lat": 45.289022,
+   "lon": 4.813251,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-18",
+   "nom": "Hameau de la Tulandière",
+   "lat": 45.289022,
+   "lon": 4.813251,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-18",
+   "nom": "Hameau de la Tulandière",
+   "lat": 45.289022,
+   "lon": 4.813251,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-18",
+   "nom": "Hameau de la Tulandière",
+   "lat": 45.289022,
+   "lon": 4.813251,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-18",
+   "nom": "Hameau de la Tulandière",
+   "lat": 45.289022,
+   "lon": 4.813251,
+   "flux": "textile",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-19",
+   "nom": "Chemin de Milan",
+   "lat": 45.286083,
+   "lon": 4.816297,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-19",
+   "nom": "Chemin de Milan",
+   "lat": 45.286083,
+   "lon": 4.816297,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-19",
+   "nom": "Chemin de Milan",
+   "lat": 45.286083,
+   "lon": 4.816297,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-19",
+   "nom": "Chemin de Milan",
+   "lat": 45.286083,
+   "lon": 4.816297,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-19",
+   "nom": "Chemin de Milan",
+   "lat": 45.286083,
+   "lon": 4.816297,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-19",
+   "nom": "Chemin de Milan",
+   "lat": 45.286083,
+   "lon": 4.816297,
+   "flux": "textile",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-20",
+   "nom": "Allée des Iris",
+   "lat": 45.286094,
+   "lon": 4.819056,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-20",
+   "nom": "Allée des Iris",
+   "lat": 45.286094,
+   "lon": 4.819056,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-20",
+   "nom": "Allée des Iris",
+   "lat": 45.286094,
+   "lon": 4.819056,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-20",
+   "nom": "Allée des Iris",
+   "lat": 45.286094,
+   "lon": 4.819056,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-20",
+   "nom": "Allée des Iris",
+   "lat": 45.286094,
+   "lon": 4.819056,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-20",
+   "nom": "Allée des Iris",
+   "lat": 45.286094,
+   "lon": 4.819056,
+   "flux": "textile",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-21",
+   "nom": "Allée des Capucines",
+   "lat": 45.290527,
+   "lon": 4.821839,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-21",
+   "nom": "Allée des Capucines",
+   "lat": 45.290527,
+   "lon": 4.821839,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-21",
+   "nom": "Allée des Capucines",
+   "lat": 45.290527,
+   "lon": 4.821839,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-21",
+   "nom": "Allée des Capucines",
+   "lat": 45.290527,
+   "lon": 4.821839,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-21",
+   "nom": "Allée des Capucines",
+   "lat": 45.290527,
+   "lon": 4.821839,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-21",
+   "nom": "Allée des Capucines",
+   "lat": 45.290527,
+   "lon": 4.821839,
+   "flux": "textile",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-22",
+   "nom": "Avenue du Docteur Lucien Steinberg",
+   "lat": 45.294906,
+   "lon": 4.812911,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-22",
+   "nom": "Avenue du Docteur Lucien Steinberg",
+   "lat": 45.294906,
+   "lon": 4.812911,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-22",
+   "nom": "Avenue du Docteur Lucien Steinberg",
+   "lat": 45.294906,
+   "lon": 4.812911,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-22",
+   "nom": "Avenue du Docteur Lucien Steinberg",
+   "lat": 45.294906,
+   "lon": 4.812911,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-22",
+   "nom": "Avenue du Docteur Lucien Steinberg",
+   "lat": 45.294906,
+   "lon": 4.812911,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-22",
+   "nom": "Avenue du Docteur Lucien Steinberg",
+   "lat": 45.294906,
+   "lon": 4.812911,
+   "flux": "textile",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-23",
+   "nom": "Rue de Bonrepos",
+   "lat": 45.297637,
+   "lon": 4.820392,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-23",
+   "nom": "Rue de Bonrepos",
+   "lat": 45.297637,
+   "lon": 4.820392,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-23",
+   "nom": "Rue de Bonrepos",
+   "lat": 45.297637,
+   "lon": 4.820392,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-23",
+   "nom": "Rue de Bonrepos",
+   "lat": 45.297637,
+   "lon": 4.820392,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-23",
+   "nom": "Rue de Bonrepos",
+   "lat": 45.297637,
+   "lon": 4.820392,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-23",
+   "nom": "Rue de Bonrepos",
+   "lat": 45.297637,
+   "lon": 4.820392,
+   "flux": "textile",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-24",
+   "nom": "Rue du Terraly",
+   "lat": 45.299191,
+   "lon": 4.817872,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-24",
+   "nom": "Rue du Terraly",
+   "lat": 45.299191,
+   "lon": 4.817872,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-24",
+   "nom": "Rue du Terraly",
+   "lat": 45.299191,
+   "lon": 4.817872,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-24",
+   "nom": "Rue du Terraly",
+   "lat": 45.299191,
+   "lon": 4.817872,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-24",
+   "nom": "Rue du Terraly",
+   "lat": 45.299191,
+   "lon": 4.817872,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-24",
+   "nom": "Rue du Terraly",
+   "lat": 45.299191,
+   "lon": 4.817872,
+   "flux": "textile",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-25",
+   "nom": "Avenue de Lyon",
+   "lat": 45.299007,
+   "lon": 4.811032,
+   "flux": "ordures_menageres",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-25",
+   "nom": "Avenue de Lyon",
+   "lat": 45.299007,
+   "lon": 4.811032,
+   "flux": "emballages",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-25",
+   "nom": "Avenue de Lyon",
+   "lat": 45.299007,
+   "lon": 4.811032,
+   "flux": "verre",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-25",
+   "nom": "Avenue de Lyon",
+   "lat": 45.299007,
+   "lon": 4.811032,
+   "flux": "papier",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-25",
+   "nom": "Avenue de Lyon",
+   "lat": 45.299007,
+   "lon": 4.811032,
+   "flux": "carton",
+   "nbUnites": 1
+  },
+  {
+   "site": "SRA-25",
+   "nom": "Avenue de Lyon",
+   "lat": 45.299007,
+   "lon": 4.811032,
+   "flux": "textile",
+   "nbUnites": 1
+  }
+ ],
+ "observations": []
+}
