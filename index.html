@@ -898,6 +898,7 @@ function appliquerConfig() {
   cfgPut("endpoint", ENDPOINT);
   const pref = (CONF.commune && CONF.commune.prefixeCode) || "";
   if (pref) $("code-i").placeholder = pref + "-XXXXXX";
+  verifierCodeCommune(pref);
   $("share-u").textContent = URL_PARTAGE;
   afficherVersion();
   /* Logo de la commune : en-tete + favicon. Absent ou introuvable : rien ne s'affiche. */
@@ -1934,6 +1935,27 @@ function poserCode(v) {
   if (l) l.textContent = CODE ? "Code ••••" + CODE.slice(-2) : "Code d'accès";
   // Nouveau code : son rôle est redemandé (différé : la fonction est définie plus bas).
   setTimeout(() => { try { verifierRole(); } catch {} }, 0);
+}
+/* Le code gardé sur le téléphone doit être celui de CETTE commune (il porte son préfixe,
+   ex. ANDE-…). Sinon — préfixe changé, ou code d'une autre commune resté en mémoire —
+   on l'oublie et on demande le bon. Premier lancement sans code : on le demande aussi. */
+let codeDemande = false;
+function verifierCodeCommune(pref) {
+  if (!pref || codeDemande) return;
+  const n0 = (CONF.commune && CONF.commune.nom) || "";
+  const deNom = n0 ? (/^[aeiouyhàâéèêîôû]/i.test(n0) ? "d'" : "de ") + n0 : "de la commune";
+  if (CODE && !CODE.toUpperCase().startsWith(pref.toUpperCase())) {
+    codeDemande = true;
+    try { localStorage.removeItem("pav-admin"); } catch {}
+    poserCode("");
+    setTimeout(() => ouvrirCode("Le code enregistré n'est pas un code " + deNom + " (" + pref + "-…). Saisis ton code d'accès."), 300);
+  } else if (!CODE) {
+    let deja = false; try { deja = localStorage.getItem("pav-code-demande") === "1"; } catch {}
+    if (deja) return;
+    codeDemande = true;
+    try { localStorage.setItem("pav-code-demande", "1"); } catch {}
+    setTimeout(() => ouvrirCode("Bienvenue ! Saisis le code d'accès donné par la mairie " + deNom + "."), 300);
+  }
 }
 function masquerCode(masque) {
   $("code-i").type = masque ? "password" : "text";
