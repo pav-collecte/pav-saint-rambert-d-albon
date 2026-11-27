@@ -31,6 +31,10 @@
     + ".pav-avis-tab:hover,.pav-avis-tab:focus{background:#C77700;padding-right:17px}"
     + ".pav-avis-tab.discret{background:#1F3A2E;padding:16px 10px;font-size:14px;animation:none}"
     + ".pav-avis-tab.discret .ic{font-size:19px}"
+    + ".pav-avis-tab{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}"
+    + ".pav-avis-tab.mini{padding:12px 7px;font-size:0;letter-spacing:0;border-radius:12px 0 0 12px;opacity:.85}.pav-avis-tab.mini .ic{font-size:20px;margin:0}"
+    + ".pav-avis-tab.glisse{opacity:.7;transition:none;animation:none}"
+    + ".pav-avis .reduire{display:block;margin:10px auto 0;background:none;border:0;color:#5d6a66;font:13px system-ui,sans-serif;text-decoration:underline;cursor:pointer}"
     + "@keyframes pavAvisPulse{0%,100%{box-shadow:-4px 4px 18px rgba(0,0,0,.28)}50%{box-shadow:-4px 4px 18px rgba(0,0,0,.28),0 0 0 10px rgba(224,138,0,.28)}}"
     + ".pav-avis-bulle{position:fixed;right:62px;top:50%;transform:translateY(-50%);z-index:45;background:#fff;color:#1A1F1C;border:2px solid #E08A00;border-radius:14px;"
     + "padding:12px 14px;max-width:220px;font:600 15px/1.35 system-ui,sans-serif;box-shadow:0 6px 22px rgba(0,0,0,.2);cursor:pointer;transition:opacity .4s}"
@@ -58,7 +62,31 @@
   tab.type = "button"; tab.className = "pav-avis-tab" + (dejaEnvoye ? " discret" : "");
   tab.innerHTML = '<span class="ic" aria-hidden="true">💡</span>' + (dejaEnvoye ? "Votre avis" : "Donnez votre avis");
   tab.setAttribute("aria-label", "Donner votre avis ou une idée");
+  tab.title = "Glisser vers le haut ou le bas pour déplacer · vers la droite pour réduire";
   document.body.appendChild(tab);
+  /* L'onglet se déplace (glisser vers le haut / le bas) et se réduit (glisser vers la droite ;
+     vers la gauche pour l'agrandir). Position et taille sont mémorisées sur l'appareil. */
+  var CLE_POS = "pav-avis-pos", CLE_MINI = "pav-avis-mini";
+  function placer(fr) { fr = Math.min(.92, Math.max(.08, fr)); tab.style.top = (fr * 100) + "%"; return fr; }
+  function reduire(oui) { tab.classList.toggle("mini", !!oui); ecrire(CLE_MINI, oui ? "1" : "0"); }
+  if (Number(lire(CLE_POS)) > 0) placer(Number(lire(CLE_POS)));
+  if (lire(CLE_MINI) === "1") tab.classList.add("mini");
+  var gl = null, glisseA = 0;
+  tab.addEventListener("pointerdown", function (e) { gl = { x: e.clientX, y: e.clientY, mode: "" }; try { tab.setPointerCapture(e.pointerId); } catch (er) {} });
+  tab.addEventListener("pointermove", function (e) {
+    if (!gl) return; var dx = e.clientX - gl.x, dy = e.clientY - gl.y;
+    if (!gl.mode) { if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) gl.mode = "v"; else if (Math.abs(dx) > 25) gl.mode = "h"; }
+    if (gl.mode === "v") { tab.classList.add("glisse"); gl.fr = placer(e.clientY / window.innerHeight); var bu = document.querySelector(".pav-avis-bulle"); if (bu) bu.remove(); }
+  });
+  function fin(e) {
+    if (!gl) return; var dx = e.clientX - gl.x;
+    if (gl.mode === "v") { ecrire(CLE_POS, String(gl.fr)); glisseA = Date.now(); }
+    else if (gl.mode === "h") { reduire(dx > 0); glisseA = Date.now(); }
+    tab.classList.remove("glisse"); gl = null;
+  }
+  tab.addEventListener("pointerup", fin);
+  tab.addEventListener("pointercancel", function () { tab.classList.remove("glisse"); gl = null; });
+  tab.addEventListener("click", function (e) { if (Date.now() - glisseA < 500) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
 
   /* Bulle d'invitation : au plus une fois par jour, jamais après un envoi récent. */
   var CLE_BULLE = "pav-avis-bulle";
@@ -67,6 +95,7 @@
       if (document.querySelector(".pav-avis-fond")) return;
       var b = document.createElement("div"); b.className = "pav-avis-bulle"; b.setAttribute("role", "status");
       b.innerHTML = "Une idée pour améliorer ?<small>30 secondes, c'est anonyme.</small>";
+      if (tab.style.top) b.style.top = tab.style.top; if (tab.classList.contains("mini")) b.style.right = "44px";
       document.body.appendChild(b); ecrire(CLE_BULLE, String(Date.now()));
       b.addEventListener("click", function () { b.remove(); ouvrir(); });
       tab.addEventListener("click", function () { b.remove(); });
@@ -98,10 +127,12 @@
       + '<input id="pav-avis-contact" maxlength="120" placeholder="E-mail ou téléphone" autocomplete="email">'
       + '<input class="piege" name="site_web" tabindex="-1" autocomplete="off" aria-hidden="true">'
       + '<div class="msg" aria-live="polite"></div>'
-      + '<div class="act"><button type="button" class="non">Fermer</button><button type="submit" class="ok">Envoyer</button></div></form>';
+      + '<div class="act"><button type="button" class="non">Fermer</button><button type="submit" class="ok">Envoyer</button></div>'
+      + '<button type="button" class="reduire">' + (tab.classList.contains("mini") ? "Agrandir l\'onglet 💡" : "Réduire l\'onglet 💡 (on peut aussi le glisser)") + '</button></form>';
     document.body.appendChild(fond);
     var f = fond.querySelector("form"), m = fond.querySelector(".msg");
     function fermer() { fond.remove(); tab.focus(); }
+    fond.querySelector(".reduire").addEventListener("click", function () { reduire(!tab.classList.contains("mini")); fermer(); });
     fond.addEventListener("click", function (e) { if (e.target === fond) fermer(); });
     fond.querySelector(".non").addEventListener("click", fermer);
     document.addEventListener("keydown", function esc(e) { if (e.key === "Escape" && document.body.contains(fond)) { fermer(); document.removeEventListener("keydown", esc); } });
