@@ -501,8 +501,27 @@ et « Envoyer » juste dessous, sous le même pouce. */
   .av-ok:disabled, .av-ko:disabled { opacity: .5; }
   .av-m { margin: 0; font-size: .88rem; color: var(--warn); min-height: 1.2em; }
 /* ── signal « plein » : bandeau après la photo, puces dans la loupe ──────── */
-.plein-b { position: fixed; z-index: 40; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); max-width: 32rem; margin: 0 auto; box-shadow: 0 6px 24px rgba(0,0,0,.28); overflow: hidden; background: var(--surface); border: 2px solid var(--ok); border-radius: 14px; padding: 12px 12px 14px; display: flex; flex-direction: column; gap: 9px; }
+.plein-b { position: fixed; z-index: 2147483000; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); top: 50%; transform: translateY(-50%); max-width: 26rem; margin: 0 auto; box-shadow: 0 0 0 100vmax rgba(0,0,0,.45), 0 6px 24px rgba(0,0,0,.28); overflow: hidden; background: var(--surface); border: 2px solid var(--ok); border-radius: 14px; padding: 12px 12px 14px; display: flex; flex-direction: column; gap: 9px; }
 .pl-t { font-weight: 600; font-size: .98rem; }
+/* Qualification en deux temps : « Tout va bien » (un appui) ou « Un problème » (flux pleins, dépôt au sol). */
+.plein-b .pl-t { text-align: center; font-size: 1.05rem; }
+.plein-b { max-height: calc(100dvh - 24px); overflow-y: auto; }
+@media (max-height: 700px) { .pl-tu { min-height: 100px; } .pl-tu svg { width: 42px; height: 42px; } }
+.pl-g { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.pl-g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pl-tu { appearance: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 124px; padding: 10px 4px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); font: 600 .95rem var(--font-ui); text-align: center; line-height: 1.15; }
+.pl-tu svg { width: 52px; height: 52px; stroke-width: 1.8; }
+.pl-tu.gros { min-height: 124px; font-size: 1.05rem; }
+.pl-tu.gros svg { width: 48px; height: 48px; }
+.pl-tu.vert { border-color: var(--ok); color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, var(--surface)); }
+.pl-tu.orange { border-color: var(--warn); color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, var(--surface)); }
+.pl-tu.rouge { border-color: color-mix(in srgb, var(--alert) 60%, transparent); color: var(--alert); }
+.pl-tu.on { background: color-mix(in srgb, var(--warn) 26%, var(--surface)); border-color: var(--warn); color: var(--ink); }
+.pl-tu.rouge.on { background: color-mix(in srgb, var(--alert) 22%, var(--surface)); border-color: var(--alert); }
+.pl-tu .et { font: 600 .8rem var(--font-ui); }
+.pl-bas { display: flex; gap: 10px; }
+.pl-bas .pl-ok { margin-left: 0; flex: 1; }
+.pl-ret { appearance: none; cursor: pointer; min-height: 46px; padding: 8px 16px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); font: 600 .95rem var(--font-ui); }
 .pl-l { display: flex; flex-wrap: wrap; gap: 8px; }
 .pl-c { appearance: none; cursor: pointer; min-height: 46px; padding: 8px 16px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); font: 600 1rem var(--font-ui); }
 .pl-c.on { background: color-mix(in srgb, var(--warn) 20%, var(--surface)); border-color: var(--warn); }
@@ -1066,7 +1085,21 @@ function puces(uuid, site) {
       + `<button type="button" class="pl-c pl-s${l.includes("_sale") ? " on" : ""}" data-pf="_sale" aria-pressed="${l.includes("_sale")}">Sale</button>`
 + `<button type="button" class="pl-c pl-p${l.includes("_propre") ? " on" : ""}" data-pf="_propre" aria-pressed="${l.includes("_propre")}">Propre</button>`;
 }
-let PB_U = null, PB_S = null, PB_T = null;
+let PB_U = null, PB_S = null, PB_T = null, PB_E = "choix";
+/* Icônes des flux et des états (traits simples, couleur du texte). */
+const IC = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const ICONES = {
+  verre: IC('<path d="M10 2h4v4l1.5 2.5V21a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1V8.5L10 6z"/><path d="M8.5 12h7"/>'),
+  emballages: IC('<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9z"/><path d="m4 7.5 8 4.5 8-4.5"/><path d="M12 12v9"/>'),
+  papier: IC('<path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h6"/>'),
+  carton: IC('<rect x="3" y="7" width="18" height="13" rx="1"/><path d="M3 7l2-4h14l2 4"/><path d="M10 11h4"/>'),
+  textile: IC('<path d="M8 3 4 6l2 4 2-1v12h8V9l2 1 2-4-4-3a4 4 0 0 1-8 0z"/>'),
+  ordures_menageres: IC('<path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M5 7l1 13a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1l1-13"/><path d="M9 7V4h6v3"/>'),
+  biodechets: IC('<path d="M5 19c8 0 14-6 14-14-8 0-14 6-14 14z"/><path d="M5 19 13 11"/>'),
+  _ok: IC('<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>'),
+  _pb: IC('<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/>'),
+  _sale: IC('<path d="M4 20h16"/><path d="M6 20c0-3 2-5 4-5s2 2 4 2 4-2 4-5"/><circle cx="8" cy="9" r="2"/><circle cx="15" cy="6" r="1.5"/>'),
+};
 function fermerBandeau() { clearTimeout(PB_T); $("plein-b").hidden = true; PB_U = PB_S = null; }
 function relancerBandeau(ms) {
   clearTimeout(PB_T);
@@ -1078,17 +1111,26 @@ function relancerBandeau(ms) {
   PB_T = setTimeout(fermerBandeau, ms);
 }
 function dessinerBandeau() {
-  const multi = Object.keys(PB_S.postes || {}).length > 1;
-  $("plein-b").innerHTML = `<span class="pl-t">Photo enregistrée — comment est l'îlot ?</span>`
-+ `<span class="pl-a">${multi ? "Touche le conteneur plein, « Sale » ou « Propre »" : "Touche « Plein », « Sale » ou « Propre »"}, puis OK.</span>`
-+ `<div class="pl-l">${puces(PB_U, PB_S)}<button type="button" class="pl-ok">OK</button></div><i class="pl-j"><b></b></i>`;
+  const flux = Object.keys(PB_S.postes || {}), l = pleinsDe(PB_U);
+  if (PB_E === "choix") {
+    $("plein-b").innerHTML = `<span class="pl-t">Photo enregistrée — comment est l'îlot ?</span>`
+      + `<div class="pl-g"><button type="button" class="pl-tu gros vert" data-pe="ok">${ICONES._ok}Tout va bien</button>`
+      + `<button type="button" class="pl-tu gros orange" data-pe="pb">${ICONES._pb}Un problème</button></div><i class="pl-j"><b></b></i>`;
+    return;
+  }
+  const tuiles = flux.map(f => `<button type="button" class="pl-tu${l.includes(f) ? " on" : ""}" data-pf="${f}" aria-pressed="${l.includes(f)}">${ICONES[f] || ICONES.ordures_menageres}${flux.length === 1 ? "Plein" : majuscule(nomFlux(f))}${l.includes(f) ? '<span class="et">✓ plein</span>' : ""}</button>`).join("")
+    + `<button type="button" class="pl-tu rouge${l.includes("_sale") ? " on" : ""}" data-pf="_sale" aria-pressed="${l.includes("_sale")}">${ICONES._sale}Dépôt au sol${l.includes("_sale") ? '<span class="et">✓ sale</span>' : ""}</button>`;
+  const n = flux.length + 1;
+  $("plein-b").innerHTML = `<span class="pl-t">Touche ce qui est plein</span>`
+    + `<div class="pl-g">${tuiles}</div>`
+    + `<div class="pl-bas"><button type="button" class="pl-ret" data-pe="retour">Retour</button><button type="button" class="pl-ok">OK</button></div>`;
 }
 /* Fixé en bas de l'écran : la page remonte en haut après chaque photo, un
 bandeau dans le flux restait hors de vue. Sans appui, il s'efface après 8 s ; un premier appui laisse
 4 s pour cocher l'autre signal (plein et sale), OK ferme aussitôt. */
 function proposerPlein(uuid, site) {
   if (!site || !Object.keys(site.postes || {}).length) return;
-  PB_U = uuid; PB_S = site;
+  PB_U = uuid; PB_S = site; PB_E = "choix";
   dessinerBandeau(); $("plein-b").hidden = false; relancerBandeau(8000);
 }
 function dessinerLoupePlein(uuid) {
@@ -1107,14 +1149,27 @@ return t.length ? '<span class="vg-p">' + t.join(" · ") + "</span>" : "";
 document.addEventListener("click", async e => {
   const t = e.target; if (!t.closest) return;
   if (t.closest("#plein-b .pl-ok")) { fermerBandeau(); return; }
-  const c = t.closest("#plein-b .pl-c");
+  const pe = t.closest("#plein-b [data-pe]");
+  if (pe && PB_U) {
+    const u = PB_U;
+    if (pe.dataset.pe === "ok") {
+      /* « Tout va bien » : propre, et c'est fini en un appui. */
+      if (!pleinsDe(u).includes("_propre")) await basculerPlein(u, "_propre");
+      fermerBandeau(); rendre(); return;
+    }
+    if (pe.dataset.pe === "pb") {
+      if (pleinsDe(u).includes("_propre")) await basculerPlein(u, "_propre");
+      /* Écran des problèmes : pas de fermeture automatique, on coche ce qu'on veut puis OK. */
+      PB_E = "pb"; dessinerBandeau(); clearTimeout(PB_T); rendre(); return;
+    }
+    if (pe.dataset.pe === "retour") { PB_E = "choix"; dessinerBandeau(); relancerBandeau(8000); return; }
+  }
+  const c = t.closest("#plein-b .pl-c, #plein-b .pl-tu[data-pf]");
   if (c && PB_U) {
     const u = PB_U; await basculerPlein(u, c.dataset.pf);
     if (PB_U === u) {
-      /* Plein ET sale cochés : tout est dit, on ferme. Sinon 4 s pour l'autre
-         signal, ou OK pour fermer tout de suite. */
-      const l = pleinsDe(u), deux = l.includes("_propre") || (l.includes("_sale") && l.some(x => x[0] !== "_"));
-      dessinerBandeau(); relancerBandeau(deux ? 700 : 4000);
+      /* On peut cocher plusieurs flux : la fenêtre reste ouverte jusqu'à OK. */
+      dessinerBandeau(); clearTimeout(PB_T);
     }
     rendre(); return;
   }
