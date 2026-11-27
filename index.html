@@ -1189,7 +1189,7 @@ let envoiTotal = 0, envoiFaites = 0;
    téléphone — écraserait le choix de l'agent et refermerait le bouton.
    Il est relâché après la photo, pour que la détection reprenne la main au
    point suivant de la tournée. */
-let choixManuel = false;
+let choixManuel = false, gpsAuChoix;
 /* L'îlot que le GPS reconnaît, indépendamment de celui qui est affiché.
    C'est lui qui sert de verrou : tant qu'il existe, on ne bascule pas sur un
    autre point sans le demander. */
@@ -1373,9 +1373,22 @@ function majGps() {
   $("gps-txt").textContent = `${position.lat.toFixed(5)}, ${position.lon.toFixed(5)} · ±${position.precision_m} m`
     + (memePoint ? ` · ${r.d} m du point` : "");
 
+  /* Point que le GPS reconnaissait au moment du choix à la main : tant que l'agent n'a
+     pas rejoint un AUTRE point, son choix tient (il peut viser un îlot voisin exprès). */
+  const gpsAvant = gpsSite ? gpsSite.code : null;
+  if (!choixManuel) gpsAuChoix = undefined; else if (gpsAuChoix === undefined) gpsAuChoix = gpsAvant;
   gpsSite = r.statut === "ok" ? r.site : null;
 
-  // Le choix de l'agent ne se fait pas écraser par la position suivante.
+  /* Le choix de l'agent ne se fait pas écraser par la position suivante… sauf s'il
+     est parti : le GPS reconnaît sans ambiguïté un autre point ET le point choisi est
+     hors de portée (plus loin que le rayon + la précision). Sans ça, un point touché
+     plus tôt dans la liste restait collé et le bandeau « Les photos partiront sur… »
+     s'affichait alors que l'agent est bien devant le bon îlot. */
+  if (choixManuel && r.statut === "ok" && courant && courant.code !== r.site.code
+      && r.site.code !== gpsAuChoix
+      && distance(position, courant) > RAYON_M + (position.precision_m || 0)) {
+    choixManuel = false; gpsAuChoix = undefined;
+  }
   if (choixManuel) { rendre(); return; }
 
   if (r.statut === "ok") { $("state-lbl").textContent = "Point détecté"; courant = r.site; }
