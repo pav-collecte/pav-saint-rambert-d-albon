@@ -797,8 +797,8 @@ function rendu(){
   };
   const sites=calcule(obs).sort(parFraicheur);
   const GRAND=sites.length>SEUIL_GV;
-  /* Grande ville : la carte passe juste après « La commune en un coup d'œil ». */
-  if(GRAND){ const secC=(document.getElementById('lmap')||{}).closest&&document.getElementById('lmap').closest('section'), ref=document.getElementById('global-commune');
+  /* La carte passe juste après « La commune en un coup d'œil » (toutes les communes). */
+  { const secC=(document.getElementById('lmap')||{}).closest&&document.getElementById('lmap').closest('section'), ref=document.getElementById('global-commune');
     if(secC&&ref&&ref.nextElementSibling!==secC) ref.after(secC); }
   const SECTEURS=GRAND?poserSecteurs(sites):[];
 
