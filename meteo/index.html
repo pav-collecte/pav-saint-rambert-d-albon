@@ -115,7 +115,10 @@ section{margin-top:40px}
 #lmap{height:440px;border-radius:8px;overflow:hidden;z-index:0}
 @media (max-width:600px){#lmap{height:380px}}
 .lm{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;color:#fff;font:700 14px "IBM Plex Mono",monospace;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
-.lmc{display:grid;place-items:center;border-radius:50%;color:#fff;font:700 13px "IBM Plex Mono",monospace;border:3px solid rgba(255,255,255,.9);box-shadow:0 1px 5px rgba(0,0,0,.35)}
+.lmc{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;border-radius:50%;color:#fff;font:700 12px "IBM Plex Mono",monospace;border:3px solid rgba(255,255,255,.9);box-shadow:0 1px 5px rgba(0,0,0,.35)}
+.lmc b{font-size:15px}
+.lmc i{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font:700 10px "IBM Plex Mono",monospace;font-style:normal;border:2px solid #fff}
+.lpop .score{margin:6px 0 2px}
 .lpop b{display:block;font-size:14px}.lpop small{color:#666;font-family:"IBM Plex Mono",monospace}
 .lpop a{display:inline-block;margin-top:6px;font-weight:600}
 .maplegend{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:12px;font-size:.76rem;color:var(--ink-2)}
@@ -560,6 +563,15 @@ const calcule=obs=>calculeAvec(REF,obs);
    d'une grille posée sur la commune (environ 36 cases, les vides disparaissent). Chaque
    secteur porte le nom de sa rue la plus représentée. Les petites communes ne changent pas. */
 const SEUIL_GV=200;
+/* Couleur d'un secteur ou d'un groupe de points : la lettre la plus mauvaise atteinte par au
+   moins un tiers des points notés (D ou E pour un tiers ou plus → D, etc.). Un seul point
+   noir ne colore donc pas tout un quartier ; le pire reste affiché à part. */
+function lettreDominante(lettres){
+  const n=lettres.filter(Boolean); if(!n.length) return null;
+  const ord='ABCDE';
+  for(let i=4;i>=0;i--){ if(n.filter(l=>ord.indexOf(l)>=i).length*3>=n.length) return ord[i]; }
+  return 'A';
+}
 function poserSecteurs(sites){
   const ok=sites.filter(s=>isFinite(s.lat)&&isFinite(s.lon));
   if(!ok.length) return [];
@@ -584,6 +596,7 @@ function poserSecteurs(sites){
     x.nom='Secteur '+x.id; x.rue=rue?rue[0]:'';
     x.lat=x.sites.reduce((t,s)=>t+s.lat,0)/x.sites.length; x.lon=x.sites.reduce((t,s)=>t+s.lon,0)/x.sites.length;
     x.pire=pire; x.nNotes=notes.length;
+    const ld=lettreDominante(notes.map(s=>s.L.l)); x.dom=ld?(notes.find(s=>s.L.l===ld)||{}).L:null;
     x.nDE=notes.filter(s=>s.L.l==='D'||s.L.l==='E').length;
     x.nJamais=x.sites.filter(s=>!s.dernier).length;
     x.nRetard=x.sites.filter(s=>s.dernier&&jours(s.dernier)>JOURS_ALERTE).length;
@@ -622,15 +635,16 @@ function carteReelle(sites,grand){
     const ordreL=l=>l?'ABCDE'.indexOf(l):-1;
     const coul=l=>css(l?'--s'+l:'--sOff');
     LCOUCHE=(grand&&L.markerClusterGroup)?L.markerClusterGroup({maxClusterRadius:50,showCoverageOnHover:false,
-      iconCreateFunction:c=>{ const m=c.getAllChildMarkers(); const pire=m.reduce((p,x)=>ordreL(x.options.lettre)>ordreL(p)?x.options.lettre:p,null);
-        const n=m.length, t=n<10?34:n<100?40:n<1000?48:56;
-        return L.divIcon({html:'<span class="lmc" style="width:'+t+'px;height:'+t+'px;background:'+coul(pire)+'">'+n+'</span>',className:'',iconSize:[t,t]}); }})
+      iconCreateFunction:c=>{ const m=c.getAllChildMarkers(); const dom=lettreDominante(m.map(x=>x.options.lettre));
+        const pire=m.reduce((p,x)=>ordreL(x.options.lettre)>ordreL(p)?x.options.lettre:p,null);
+        const n=m.length, t=n<10?38:n<100?44:n<1000?52:60;
+        return L.divIcon({html:'<span class="lmc" style="width:'+t+'px;height:'+t+'px;background:'+coul(dom)+'">'+(dom?'<b>'+dom+'</b>':'')+n+(pire&&pire!==dom?'<i style="background:'+coul(pire)+'">'+pire+'</i>':'')+'</span>',className:'',iconSize:[t,t]}); }})
       : L.layerGroup();
     ok.forEach(s=>{
       const l=s.L?s.L.l:null;
       const m=L.marker([s.lat,s.lon],{lettre:l,title:s.site+' — '+s.nom,
         icon:L.divIcon({html:'<span class="lm" style="background:'+coul(l)+'">'+(l||'?')+'</span>',className:'',iconSize:[30,30],iconAnchor:[15,15]})});
-      m.bindPopup('<div class="lpop"><small>'+esc(s.site)+'</small><b>'+esc(s.nom)+'</b>'+(s.L?'Bac-Score '+s.L.l+' — '+esc(s.L.lab):'Non noté')
+      m.bindPopup('<div class="lpop"><small>'+esc(s.site)+'</small><b>'+esc(s.nom)+'</b>'+scoreStrip(s.L)+(s.L?'Bac-Score '+s.L.l+' — '+esc(s.L.lab):'Non noté')
         +'<br>'+(s.dernier?'relevé '+esc(dateFR(s.dernier)):'jamais relevé')+'<br><a href="#" data-fiche="'+esc(s.site)+'">Voir la fiche ›</a></div>');
       LCOUCHE.addLayer(m);
     });
@@ -672,7 +686,7 @@ function dessinerCarteGV(sites,SECTEURS){
     SECTEURS.forEach(x=>{ const cx=pr.x(x), cy=pr.y(x), r=rMax*(0.6+0.4*Math.sqrt(x.sites.length/max));
       g+='<g class="gv-m" data-sect="'+x.id+'" style="cursor:pointer"><title>'+esc(x.nom+(x.rue?' — '+x.rue:'')+' : '+x.sites.length+' points'+(x.pire?', note la plus basse '+x.pire.l:''))+'</title>'
         +'<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+Math.max(r,dmin/2).toFixed(1)+'" fill="transparent"/>'
-        +'<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+r.toFixed(1)+'" fill="'+coul(x.pire)+'" fill-opacity=".9" stroke="var(--surface)" stroke-width="3"/>'
+        +'<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+r.toFixed(1)+'" fill="'+coul(x.dom)+'" fill-opacity=".9" stroke="var(--surface)" stroke-width="3"/>'
         +'<text x="'+cx.toFixed(1)+'" y="'+(cy+8).toFixed(1)+'" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="'+Math.round(Math.max(13,Math.min(24,r*0.75)))+'" font-weight="700" fill="#fff">'+x.sites.length+'</text>'
         +'<text x="'+cx.toFixed(1)+'" y="'+(cy-r-6).toFixed(1)+'" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="16" fill="var(--ink-3)">'+x.id+'</text></g>';
     });
@@ -783,6 +797,9 @@ function rendu(){
   };
   const sites=calcule(obs).sort(parFraicheur);
   const GRAND=sites.length>SEUIL_GV;
+  /* Grande ville : la carte passe juste après « La commune en un coup d'œil ». */
+  if(GRAND){ const secC=(document.getElementById('lmap')||{}).closest&&document.getElementById('lmap').closest('section'), ref=document.getElementById('global-commune');
+    if(secC&&ref&&ref.nextElementSibling!==secC) ref.after(secC); }
   const SECTEURS=GRAND?poserSecteurs(sites):[];
 
   /* Alertes du « coup d'œil » : îlots en D ou E, et îlots sans relevé depuis plus de JOURS_ALERTE jours. */
@@ -1032,10 +1049,10 @@ else {
     const html=SECTEURS.map(x=>{
       const l=x.sites.filter(garde); if(!l.length) return '';
       nTot+=l.length;
-      const L=x.pire, ouvert=!!Q;
+      const L=x.dom, ouvert=!!Q;
       return '<details class="gv-sect" data-sect="'+x.id+'"'+(ouvert?' open':'')+'><summary>'
-        +'<span class="gv-l" style="background:'+(L?'var('+L.var+')':'var(--sOff)')+'" title="Note la plus basse du secteur">'+(L?L.l:'?')+'</span>'
-        +'<span class="gv-n">'+esc(x.nom)+(x.rue?' — '+esc(x.rue):'')+'<small>'+l.length+' point'+(l.length>1?'s':'')+(l.length!==x.sites.length?' sur '+x.sites.length:'')+' · '+x.nNotes+' noté'+(x.nNotes>1?'s':'')+'</small></span>'
+        +'<span class="gv-l" style="background:'+(L?'var('+L.var+')':'var(--sOff)')+'" title="Couleur du secteur : la note la plus mauvaise d\'au moins un tiers de ses points notés">'+(L?L.l:'?')+'</span>'
+        +'<span class="gv-n">'+esc(x.nom)+(x.rue?' — '+esc(x.rue):'')+'<small>'+l.length+' point'+(l.length>1?'s':'')+(l.length!==x.sites.length?' sur '+x.sites.length:'')+' · '+x.nNotes+' noté'+(x.nNotes>1?'s':'')+(x.pire&&L&&x.pire.l!==L.l?' · pire : '+x.pire.l:'')+'</small></span>'
         +'<span class="gv-c">'+(x.nDE?x.nDE+' D/E<br>':'')+(x.nRetard?x.nRetard+' en retard<br>':'')+(x.nJamais?x.nJamais+' jamais':'')+'</span>'
         +'</summary><div class="gv-corps"></div></details>';
     }).join('');
