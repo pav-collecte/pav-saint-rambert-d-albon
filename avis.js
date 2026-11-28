@@ -32,6 +32,7 @@
     + ".pav-avis-tab.discret{background:#1F3A2E;padding:16px 10px;font-size:14px;animation:none}"
     + ".pav-avis-tab.discret .ic{font-size:19px}"
     + ".pav-avis-tab{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}"
+    + ".pav-avis-tab{transition:padding .5s ease,font-size .5s ease,opacity .5s ease}"
     + ".pav-avis-tab.mini{padding:12px 7px;font-size:0;letter-spacing:0;border-radius:12px 0 0 12px;opacity:.85}.pav-avis-tab.mini .ic{font-size:20px;margin:0}"
     + ".pav-avis-tab.glisse{opacity:.7;transition:none;animation:none}"
     + ".pav-avis .reduire{display:block;margin:10px auto 0;background:none;border:0;color:#5d6a66;font:13px system-ui,sans-serif;text-decoration:underline;cursor:pointer}"
@@ -70,7 +71,13 @@
   function placer(fr) { fr = Math.min(.92, Math.max(.08, fr)); tab.style.top = (fr * 100) + "%"; return fr; }
   function reduire(oui) { tab.classList.toggle("mini", !!oui); ecrire(CLE_MINI, oui ? "1" : "0"); }
   if (Number(lire(CLE_POS)) > 0) placer(Number(lire(CLE_POS)));
-  if (lire(CLE_MINI) === "1") tab.classList.add("mini");
+  /* À l'ouverture de la page, l'onglet se montre en grand quelques secondes, puis se réduit
+     tout seul en petite languette (une ampoule). Il reste glissable et agrandissable. */
+  var auto = setTimeout(function () {
+    tab.classList.add("mini");
+    var bu = document.querySelector(".pav-avis-bulle"); if (bu) bu.style.right = "44px";
+  }, 6000);
+  tab.addEventListener("pointerdown", function () { clearTimeout(auto); });
   var gl = null, glisseA = 0;
   tab.addEventListener("pointerdown", function (e) { gl = { x: e.clientX, y: e.clientY, mode: "" }; try { tab.setPointerCapture(e.pointerId); } catch (er) {} });
   tab.addEventListener("pointermove", function (e) {
