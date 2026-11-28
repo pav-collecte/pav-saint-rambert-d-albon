@@ -56,7 +56,12 @@
     + ".pav-avis .piege{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}"
     + ".pav-avis .act{display:flex;gap:8px;margin-top:12px}.pav-avis .act button{flex:1;border-radius:10px;padding:10px;font:600 15px system-ui,sans-serif;cursor:pointer}"
     + ".pav-avis .ok{background:#1F3A2E;color:#fff;border:0}.pav-avis .non{background:#fff;color:#1A1F1C;border:1px solid #D8DCD7}"
-    + ".pav-avis .msg{font-size:.84rem;margin-top:8px;min-height:1.2em}";
+    + ".pav-avis .msg{font-size:.84rem;margin-top:8px;min-height:1.2em}"
+    + ".pav-aide-fil{max-height:46vh;overflow:auto;display:flex;flex-direction:column;gap:8px;margin:4px 0 10px}"
+    + ".pav-aide-b{padding:9px 12px;border-radius:12px;max-width:88%;white-space:pre-wrap;font-size:.92rem;line-height:1.4}"
+    + ".pav-aide-b.ia{background:#EEF3EF;color:#1A1F1C;align-self:flex-start;border-bottom-left-radius:4px}"
+    + ".pav-aide-b.moi{background:#1F3A2E;color:#fff;align-self:flex-end;border-bottom-right-radius:4px}"
+    + ".pav-aide-b.attente{opacity:.6}";
   document.head.appendChild(css);
 
   var tab = document.createElement("button");
@@ -65,6 +70,17 @@
   tab.setAttribute("aria-label", "Donner votre avis ou une idée");
   tab.title = "Glisser vers le haut ou le bas pour déplacer · vers la droite pour réduire";
   document.body.appendChild(tab);
+  /* Appli de tournée : l'onglet n'apparaît qu'une fois l'agent rodé, après un certain nombre de
+     photos envoyées (config.json : avis.apresEnvois, 10 par défaut ; 0 = tout de suite). */
+  var CACHE = false;
+  if (PAGE === "collecte" && !VIA_ENCART) {
+    var seuilAvis = 10;
+    try { var cfgA = JSON.parse(lire("pav-config") || "null"); var vA = cfgA && cfgA.avis && Number(cfgA.avis.apresEnvois); if (vA >= 0 && isFinite(vA)) seuilAvis = vA; } catch (e) {}
+    CACHE = (Number(lire("pav-envois-total")) || 0) < seuilAvis;
+    /* L'onglet sert aussi d'aide (chatbot limité à l'appli) : toujours visible en tournée. */
+    tab.innerHTML = '<span class="ic" aria-hidden="true">💡</span>' + (CACHE ? "Besoin d'aide ?" : "Aide et avis");
+    tab.setAttribute("aria-label", CACHE ? "Aide sur l'application" : "Aide sur l'application, ou donner votre avis");
+  }
   /* L'onglet se déplace (glisser vers le haut / le bas) et se réduit (glisser vers la droite ;
      vers la gauche pour l'agrandir). Position et taille sont mémorisées sur l'appareil. */
   var CLE_POS = "pav-avis-pos", CLE_MINI = "pav-avis-mini";
@@ -97,7 +113,7 @@
 
   /* Bulle d'invitation : au plus une fois par jour, jamais après un envoi récent. */
   var CLE_BULLE = "pav-avis-bulle";
-  if (!VIA_ENCART && !dejaEnvoye && !(Number(lire(CLE_BULLE)) > Date.now() - 864e5)) {
+  if (!CACHE && !VIA_ENCART && !dejaEnvoye && !(Number(lire(CLE_BULLE)) > Date.now() - 864e5)) {
     setTimeout(function () {
       if (document.querySelector(".pav-avis-fond")) return;
       var b = document.createElement("div"); b.className = "pav-avis-bulle"; b.setAttribute("role", "status");
@@ -171,7 +187,62 @@
     });
     var premier = fond.querySelector(".etoiles button"); if (premier) premier.focus();
   }
-  tab.addEventListener("click", ouvrir);
+  /* Tournée : un appui ouvre l'aide ; une fois l'agent rodé, un choix « Aide » / « Donner mon avis ». */
+  tab.addEventListener("click", function () {
+    if (PAGE !== "collecte" || VIA_ENCART) return ouvrir();
+    if (CACHE) return ouvrirAide();
+    var fond = document.createElement("div"); fond.className = "pav-avis-fond";
+    fond.innerHTML = '<div class="pav-avis" role="dialog" aria-modal="true"><h3>Que voulez-vous faire ?</h3>'
+      + '<div class="act" style="flex-direction:column"><button type="button" class="ok" data-c="aide">❓ Obtenir de l\'aide sur l\'appli</button>'
+      + '<button type="button" class="ok" data-c="avis" style="background:#E08A00">💡 Donner mon avis</button><button type="button" class="non">Fermer</button></div></div>';
+    document.body.appendChild(fond);
+    fond.addEventListener("click", function (e) { var b = e.target.closest("button"); if (e.target === fond || (b && b.classList.contains("non"))) { fond.remove(); return; }
+      if (b && b.dataset.c) { fond.remove(); if (b.dataset.c === "aide") ouvrirAide(); else ouvrir(); } });
+  });
+
+  /* ── Aide : chatbot limité à l'utilisation de l'appli (n8n → Claude). ── */
+  var AIDE_HIST = [];
+  function urlAide() {
+    try { var c = JSON.parse(lire("pav-config") || "null"); var e = c && c.depot && c.depot.endpoint; if (e && /pav-photo\/?$/.test(e)) return e.replace(/pav-photo(\/?)$/, "pav-aide$1"); } catch (er) {}
+    return "https://n8n.srv1040760.hstgr.cloud/webhook/pav-aide";
+  }
+  function ouvrirAide() {
+    var fond = document.createElement("div"); fond.className = "pav-avis-fond";
+    fond.innerHTML = '<form class="pav-avis pav-aide" role="dialog" aria-modal="true" aria-labelledby="pav-aide-t">'
+      + '<h3 id="pav-aide-t">Aide sur l\'application</h3><p>Posez votre question sur la tournée : photos, GPS, code d\'accès, envoi…</p>'
+      + '<div class="pav-aide-fil" aria-live="polite"></div>'
+      + '<textarea id="pav-aide-q" maxlength="600" placeholder="Ex. : mes photos restent en attente, que faire ?" style="min-height:64px"></textarea>'
+      + '<div class="msg"></div><div class="act"><button type="button" class="non">Fermer</button><button type="submit" class="ok">Envoyer</button></div></form>';
+    document.body.appendChild(fond);
+    var f = fond.querySelector("form"), fil = fond.querySelector(".pav-aide-fil"), q = fond.querySelector("#pav-aide-q"), m = fond.querySelector(".msg"), ok = fond.querySelector(".ok");
+    function bulle(t, qui) { var d = document.createElement("div"); d.className = "pav-aide-b " + qui; d.textContent = t; fil.appendChild(d); fil.scrollTop = fil.scrollHeight; return d; }
+    if (!AIDE_HIST.length) bulle("Bonjour ! Je réponds uniquement aux questions sur l'application de tournée. Que se passe-t-il ?", "ia");
+    AIDE_HIST.forEach(function (x) { bulle(x.content, x.role === "user" ? "moi" : "ia"); });
+    function fermer() { fond.remove(); tab.focus(); }
+    fond.addEventListener("click", function (e) { if (e.target === fond) fermer(); });
+    fond.querySelector(".non").addEventListener("click", fermer);
+    q.addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); f.requestSubmit ? f.requestSubmit() : f.dispatchEvent(new Event("submit")); } });
+    f.addEventListener("submit", function (e) {
+      e.preventDefault(); var t = q.value.trim(); if (!t || ok.disabled) return;
+      if (!navigator.onLine) { m.textContent = "Pas de réseau : l'aide a besoin d'une connexion."; return; }
+      var cfg = null; try { cfg = JSON.parse(lire("pav-config") || "null"); } catch (er) {}
+      bulle(t, "moi"); q.value = ""; m.textContent = ""; ok.disabled = true;
+      var att = bulle("…", "ia attente");
+      fetch(urlAide(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+        commune: (cfg && cfg.commune && cfg.commune.nom) || commune || "", code: lire("pav-code") || "",
+        version: (document.getElementById("ver") || {}).textContent || "", question: t, historique: AIDE_HIST.slice(-8) }) })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          att.remove();
+          if (!j || !j.ok) { bulle((j && j.motif) || "L'aide ne répond pas pour le moment.", "ia"); return; }
+          AIDE_HIST.push({ role: "user", content: t }, { role: "assistant", content: j.texte });
+          bulle(j.texte, "ia");
+        })
+        .catch(function () { att.remove(); bulle("L'aide est injoignable pour le moment : réessayez dans un instant.", "ia"); })
+        .then(function () { ok.disabled = false; q.focus(); });
+    });
+    setTimeout(function () { q.focus(); }, 50);
+  }
 
   /* Nouvelle version de l'application (version.json, écrit à chaque diffusion) :
      un bandeau propose de mettre à jour. Vérifié chaque minute et au retour sur l'appli. */

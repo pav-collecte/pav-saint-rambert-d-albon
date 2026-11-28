@@ -2170,6 +2170,7 @@ if (it.propre) fd.append("propre", it.propre); // îlot signalé propre par l'ag
          déjà allé et photographierait deux fois le même point. */
       await marquerEnvoyee(it.uuid);
       envoyees++; envoiFaites = envoyees;
+      try { localStorage.setItem("pav-envois-total", String((Number(localStorage.getItem("pav-envois-total")) || 0) + 1)); } catch {}   // l'onglet « Votre avis » attend que l'agent soit rodé
       majFile();
     }
     if (!dernierEtat && envoyees) dernierEtat = `${envoyees} photo${envoyees > 1 ? "s" : ""} envoyée${envoyees > 1 ? "s" : ""}`;
