@@ -1471,16 +1471,17 @@ function rendre() {
   majFile();
 }
 
-var ROUND_MAX = 30, ROUND_TOUT = false, ROUND_REPLIE = false;
-try { ROUND_REPLIE = localStorage.getItem("pav-liste-repliee") === "1"; } catch {}
+var ROUND_MAX = 30, ROUND_TOUT = false, ROUND_REPLIE = true;
+/* Repliée par défaut : seul le point en cours (et ses photos) reste affiché. */
+try { ROUND_REPLIE = localStorage.getItem("pav-liste-repli") !== "0"; } catch { ROUND_REPLIE = true; }
 $("mes-ph").addEventListener("click", () => {
-  if (ROUND_REPLIE) { ROUND_REPLIE = false; try { localStorage.setItem("pav-liste-repliee", "0"); } catch {} rendre(); }
+  if (ROUND_REPLIE) { ROUND_REPLIE = false; try { localStorage.setItem("pav-liste-repli", "0"); } catch {} rendre(); }
   const li = courant && $("round").querySelector(`button[data-code="${CSS.escape(courant.code)}"]`);
   (li ? li.closest("li") : $("round")).scrollIntoView({ behavior: "smooth", block: "start" });
 });
 $("round-tg").addEventListener("click", () => {
   ROUND_REPLIE = !ROUND_REPLIE; ROUND_TOUT = false;
-  try { localStorage.setItem("pav-liste-repliee", ROUND_REPLIE ? "1" : "0"); } catch {}
+  try { localStorage.setItem("pav-liste-repli", ROUND_REPLIE ? "1" : "0"); } catch {}
   rendre();
 });
 /* Le point où l'on arrive passe en tête : on redessine quand le plus proche change. */

@@ -277,6 +277,24 @@ figure.preuve a{cursor:zoom-in}
 .al{cursor:pointer}
 .al:hover{filter:brightness(.97)}
 @keyframes alFlash{0%,60%{box-shadow:0 0 0 4px #E08A00}100%{box-shadow:none}}
+/* Mode « grande ville » (plus de 200 points) : secteurs, recherche, carte regroupée. */
+.gv{grid-column:1/-1;display:flex;flex-direction:column;gap:10px}
+.gv-outils{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.gv-outils input{flex:1;min-width:180px;font:inherit;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
+.gv-f{appearance:none;cursor:pointer;font:600 .8rem var(--sans,inherit);padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2)}
+.gv-f[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.gv-sect{border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.gv-sect>summary{cursor:pointer;list-style:none;display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center;padding:11px 14px}
+.gv-sect>summary::-webkit-details-marker{display:none}
+.gv-l{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:#fff;font:700 1rem var(--mono)}
+.gv-n{font-weight:600;color:var(--ink);min-width:0}
+.gv-n small{display:block;font-weight:400;color:var(--ink-3);font-size:.78rem}
+.gv-c{font:.78rem var(--mono);color:var(--ink-2);text-align:right;white-space:nowrap}
+.gv-corps{padding:0 12px 12px}
+.gv-corps .grid{margin-top:4px}
+.gv-plus{display:block;margin:10px auto 0;appearance:none;cursor:pointer;font:600 .85rem inherit;padding:9px 14px;border-radius:10px;border:1px dashed var(--line);background:transparent;color:var(--ink)}
+.gv-vide{color:var(--ink-3);font-size:.9rem;padding:6px 2px}
+.al-plus{display:inline-block;margin-top:4px;font-weight:600;text-decoration:underline;cursor:pointer}
 article.site.al-flash{animation:alFlash 2.2s ease-out}
 .al.orange{background:#FFF4E5;border-color:#F5CF99;color:#6B4200}
 .bars{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:12px}
@@ -529,6 +547,99 @@ import {chargerConfig, chargerBareme, urlPhoto, urlVignette, libelleCommune} fro
 let REF=[], OBS=[];
 let JOURS_ALERTE=7;   // alerte « relevé en retard » ; config.json : alertes.joursSansReleve
 const calcule=obs=>calculeAvec(REF,obs);
+/* Grande ville (plus de SEUIL_GV points) : les points sont rangés dans des secteurs, cases
+   d'une grille posée sur la commune (environ 36 cases, les vides disparaissent). Chaque
+   secteur porte le nom de sa rue la plus représentée. Les petites communes ne changent pas. */
+const SEUIL_GV=200;
+function poserSecteurs(sites){
+  const ok=sites.filter(s=>isFinite(s.lat)&&isFinite(s.lon));
+  if(!ok.length) return [];
+  let a0=Infinity,a1=-Infinity,o0=Infinity,o1=-Infinity;
+  ok.forEach(s=>{ a0=Math.min(a0,s.lat); a1=Math.max(a1,s.lat); o0=Math.min(o0,s.lon); o1=Math.max(o1,s.lon); });
+  const kx=Math.cos((a0+a1)/2*Math.PI/180), w=Math.max((o1-o0)*kx,1e-6), h=Math.max(a1-a0,1e-6);
+  const cols=Math.max(2,Math.min(8,Math.round(Math.sqrt(36*w/h)))), rows=Math.max(2,Math.min(8,Math.round(36/cols)));
+  const par=new Map();
+  ok.forEach(s=>{
+    const c=Math.min(cols-1,Math.floor((s.lon-o0)*kx/w*cols)), r=Math.min(rows-1,Math.floor((a1-s.lat)/h*rows));
+    const id=String.fromCharCode(65+r)+(c+1);
+    if(!par.has(id)) par.set(id,{id,r,c,sites:[]});
+    par.get(id).sites.push(s); s.secteur=id;
+  });
+  const ordreL=l=>l?'ABCDE'.indexOf(l):-1;
+  return [...par.values()].map(x=>{
+    const rues=new Map();
+    x.sites.forEach(s=>{ const r=String(s.nom||'').replace(/^Îlot\s+/i,'').replace(/\s+\d+\s*$/,'').trim(); if(r&&!/^point osm/i.test(r)) rues.set(r,(rues.get(r)||0)+1); });
+    const rue=[...rues.entries()].sort((a,b)=>b[1]-a[1])[0];
+    const notes=x.sites.filter(s=>s.L);
+    const pire=notes.reduce((m,s)=>ordreL(s.L.l)>ordreL(m&&m.l)?s.L:m,null);
+    x.nom='Secteur '+x.id; x.rue=rue?rue[0]:'';
+    x.lat=x.sites.reduce((t,s)=>t+s.lat,0)/x.sites.length; x.lon=x.sites.reduce((t,s)=>t+s.lon,0)/x.sites.length;
+    x.pire=pire; x.nNotes=notes.length;
+    x.nDE=notes.filter(s=>s.L.l==='D'||s.L.l==='E').length;
+    x.nJamais=x.sites.filter(s=>!s.dernier).length;
+    x.nRetard=x.sites.filter(s=>s.dernier&&jours(s.dernier)>JOURS_ALERTE).length;
+    return x;
+  }).sort((a,b)=>a.r-b.r||a.c-b.c);
+}
+/* Carte « grande ville » : vue des secteurs, puis zoom sur un secteur. */
+function dessinerCarteGV(sites,SECTEURS){
+  const map=document.getElementById('map'); if(!map) return;
+  const W=800,H=520,PAD=78;
+  const proj=pts=>{
+    let a0=Infinity,a1=-Infinity,o0=Infinity,o1=-Infinity;
+    pts.forEach(p=>{ a0=Math.min(a0,p.lat); a1=Math.max(a1,p.lat); o0=Math.min(o0,p.lon); o1=Math.max(o1,p.lon); });
+    const kx=Math.cos((a0+a1)/2*Math.PI/180), sx=Math.max((o1-o0)*kx,1e-6), sy=Math.max(a1-a0,1e-6);
+    const sc=Math.min((W-2*PAD)/sx,(H-2*PAD)/sy), ox=(W-sx*sc)/2, oy=(H-sy*sc)/2;
+    return { x:p=>ox+(p.lon-o0)*kx*sc, y:p=>oy+(a1-p.lat)*sc, pxKm:sc/111.2 };
+  };
+  const fond=pr=>{ let g='<rect x="0" y="0" width="800" height="520" fill="var(--surface-2)" rx="8"/>';
+    for(let i=1;i<8;i++) g+='<line x1="'+i*100+'" y1="0" x2="'+i*100+'" y2="520" stroke="var(--line)" stroke-width="1"/>';
+    for(let i=1;i<6;i++) g+='<line x1="0" y1="'+i*87+'" x2="800" y2="'+i*87+'" stroke="var(--line)" stroke-width="1"/>';
+    const km=pr.pxKm>600?0.1:pr.pxKm>250?0.25:pr.pxKm>120?0.5:1, b=pr.pxKm*km;
+    g+='<g><line x1="52" y1="478" x2="'+(52+b).toFixed(1)+'" y2="478" stroke="var(--ink-2)" stroke-width="2.5"/><text x="'+(52+b/2).toFixed(1)+'" y="498" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--ink-2)">'+(km<1?km*1000+' m':'1 km')+'</text></g>';
+    return g; };
+  const coul=L=>L?'var('+L.var+')':'var(--sOff)';
+  function vueVille(){
+    const pr=proj(SECTEURS), max=Math.max(...SECTEURS.map(x=>x.sites.length));
+    /* Rayon limité par l'écart entre secteurs voisins : les cercles ne se chevauchent pas. */
+    let dmin=Infinity;
+    SECTEURS.forEach((x,i)=>SECTEURS.forEach((y,j)=>{ if(j>i) dmin=Math.min(dmin,Math.hypot(pr.x(x)-pr.x(y),pr.y(x)-pr.y(y))); }));
+    const rMax=Math.max(16,Math.min(48,dmin*0.47));
+    let g=fond(pr);
+    SECTEURS.forEach(x=>{ const cx=pr.x(x), cy=pr.y(x), r=rMax*(0.6+0.4*Math.sqrt(x.sites.length/max));
+      g+='<g class="gv-m" data-sect="'+x.id+'" style="cursor:pointer"><title>'+esc(x.nom+(x.rue?' — '+x.rue:'')+' : '+x.sites.length+' points'+(x.pire?', note la plus basse '+x.pire.l:''))+'</title>'
+        +'<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+Math.max(r,dmin/2).toFixed(1)+'" fill="transparent"/>'
+        +'<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+r.toFixed(1)+'" fill="'+coul(x.pire)+'" fill-opacity=".9" stroke="var(--surface)" stroke-width="3"/>'
+        +'<text x="'+cx.toFixed(1)+'" y="'+(cy+8).toFixed(1)+'" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="'+Math.round(Math.max(13,Math.min(24,r*0.75)))+'" font-weight="700" fill="#fff">'+x.sites.length+'</text>'
+        +'<text x="'+cx.toFixed(1)+'" y="'+(cy-r-6).toFixed(1)+'" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="16" fill="var(--ink-3)">'+x.id+'</text></g>';
+    });
+    g+='<text x="400" y="26" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="20" fill="var(--ink-2)">'+sites.length+' points en '+SECTEURS.length+' secteurs — touchez un secteur pour zoomer</text>';
+    map.innerHTML=g;
+  }
+  function vueSecteur(id){
+    const x=SECTEURS.find(y=>y.id===id); if(!x) return vueVille();
+    const pr=proj(x.sites), n=x.sites.length, gros=n<=60, noms=n<=15;
+    let g=fond(pr);
+    x.sites.forEach(s=>{ const cx=pr.x(s), cy=pr.y(s);
+      g+='<g class="gv-p" data-code="'+esc(s.site)+'" style="cursor:pointer"><title>'+esc(s.site+' — '+s.nom+(s.L?' : '+s.L.l:' : non noté'))+'</title>'
+        +'<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+(gros?17:9)+'" fill="'+coul(s.L)+'" stroke="var(--surface)" stroke-width="2.5"/>'
+        +(gros?'<text x="'+cx.toFixed(1)+'" y="'+(cy+6).toFixed(1)+'" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="17" font-weight="600" fill="#fff">'+(s.L?s.L.l:'?')+'</text>':'')
+        +(noms?'<text x="'+cx.toFixed(1)+'" y="'+(cy-24).toFixed(1)+'" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="17" fill="var(--ink)">'+esc(String(s.nom).replace(/^Îlot /,''))+'</text>':'')+'</g>';
+    });
+    g+='<g class="gv-retour" style="cursor:pointer"><rect x="12" y="12" width="250" height="50" rx="12" fill="var(--surface)" stroke="var(--line)"/><text x="137" y="45" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="22" font-weight="600" fill="var(--ink)">← Toute la ville</text></g>'
+      +'<text x="790" y="90" text-anchor="end" font-family="IBM Plex Sans, sans-serif" font-size="20" fill="var(--ink-2)">'+esc(x.nom+(x.rue?' — '+x.rue:''))+' · '+n+' points</text>';
+    map.innerHTML=g;
+  }
+  map.setAttribute('aria-label','Carte des secteurs de la commune');
+  map.onclick=e=>{
+    if(e.target.closest('.gv-retour')) return vueVille();
+    const m=e.target.closest('.gv-m'); if(m) return vueSecteur(m.dataset.sect);
+    const p=e.target.closest('.gv-p'); if(p&&window.gvOuvrir){ window.gvOuvrir(p.dataset.code);
+      const art=document.querySelector('article.site[data-code="'+CSS.escape(p.dataset.code)+'"]');
+      if(art){ art.scrollIntoView({behavior:'smooth',block:'start'}); art.classList.remove('al-flash'); void art.offsetWidth; art.classList.add('al-flash'); } }
+  };
+  vueVille();
+}
 const passagesParSite=obs=>passagesAvec(REF,obs);
 
 
@@ -608,6 +719,8 @@ function rendu(){
     return a.site.localeCompare(b.site);
   };
   const sites=calcule(obs).sort(parFraicheur);
+  const GRAND=sites.length>SEUIL_GV;
+  const SECTEURS=GRAND?poserSecteurs(sites):[];
 
   /* Alertes du « coup d'œil » : îlots en D ou E, et îlots sans relevé depuis plus de JOURS_ALERTE jours. */
   (function(){
@@ -619,14 +732,27 @@ function rendu(){
     const noirs=sites.filter(s=>s.L&&(s.L.l==='D'||s.L.l==='E')&&s.dernier&&new Date(s.dernier).toDateString()===auj);
     const retard=sites.filter(s=>!s.dernier||jours(s.dernier)>JOURS_ALERTE).sort((a,b)=>(a.dernier||'').localeCompare(b.dernier||''));
     let h='';
+    /* Grande ville : un résumé et les 10 cas les plus graves, au lieu de la liste entière. */
+    const MAXAL=GRAND?10:Infinity;
+    const reste=(l)=>l.length>MAXAL?' · <a href="#sites" class="al-plus" data-gv-voir="1">et '+(l.length-MAXAL)+' autre'+(l.length-MAXAL>1?'s':'')+' : voir par secteur</a>':'';
+    if(GRAND&&retard.length){
+      const jamais=retard.filter(s=>!s.dernier).length, enRetard=retard.length-jamais;
+      const vrais=retard.filter(s=>s.dernier);
+      h+='<div class="al orange" role="alert">'+tri('#E08A00')+'<div><b>'+(enRetard?enRetard+' îlot'+(enRetard>1?'s':'')+' en retard (sans photo depuis plus de '+JOURS_ALERTE+' jours)':'Aucun îlot en retard')
+        +(jamais?' · '+jamais+' jamais relevé'+(jamais>1?'s':''):'')+'</b><br>'
+        +vrais.slice(0,MAXAL).map(s=>'<a href="#" class="al-l" data-al="'+esc(s.site)+'">'+esc(s.site+' — '+s.nom)+'</a> : dernier il y a '+jours(s.dernier)+' jours').join(' · ')
+        +(vrais.length>MAXAL||jamais?(vrais.length?' · ':'')+'<a href="#sites" class="al-plus" data-gv-voir="1">voir par secteur</a>':'')+'</div></div>';
+    }
     if(noirs.length) h+='<div class="al rouge" role="alert">'+tri('#B3261E')+'<div><b>'+noirs.length+' point'+(noirs.length>1?'s':'')+' noir'+(noirs.length>1?'s':'')+' (Bac-Score D ou E)</b><br>'
-      +noirs.map(s=>'<a href="#" class="al-l" data-al="'+esc(s.site)+'">'+esc(s.site+' — '+s.nom)+'</a>'+' : <b>'+s.L.l+'</b> '+esc(s.L.lab.toLowerCase())).join(' · ')+'</div></div>';
-    if(retard.length) h+='<div class="al orange" role="alert">'+tri('#E08A00')+'<div><b>Relevés en retard : '+retard.length+' îlot'+(retard.length>1?'s':'')+' sans photo depuis plus de '+JOURS_ALERTE+' jours</b><br>'
+      +noirs.slice(0,MAXAL).map(s=>'<a href="#" class="al-l" data-al="'+esc(s.site)+'">'+esc(s.site+' — '+s.nom)+'</a>'+' : <b>'+s.L.l+'</b> '+esc(s.L.lab.toLowerCase())).join(' · ')+reste(noirs)+'</div></div>';
+    if(!GRAND&&retard.length) h+='<div class="al orange" role="alert">'+tri('#E08A00')+'<div><b>Relevés en retard : '+retard.length+' îlot'+(retard.length>1?'s':'')+' sans photo depuis plus de '+JOURS_ALERTE+' jours</b><br>'
       +retard.map(s=>'<a href="#" class="al-l" data-al="'+esc(s.site)+'">'+esc(s.site+' — '+s.nom)+'</a>'+' : '+(s.dernier?'dernier il y a '+jours(s.dernier)+' jours':'jamais relevé')).join(' · ')+'</div></div>';
     box.innerHTML=h; box.hidden=!h;
     /* Avis AV-MWW2Z3BS-4 : un clic sur un îlot d'alerte amène à sa carte. */
-    box.onclick=e=>{ const al=e.target.closest('.al'); const l=e.target.closest('[data-al]')||(al&&al.querySelector('[data-al]')); if(!l) return; e.preventDefault();
-      const art=[...document.querySelectorAll('article.site')].find(x=>((x.querySelector('.site-code')||{}).textContent||'').includes(l.dataset.al));
+    box.onclick=e=>{ if(e.target.closest('[data-gv-voir]')){ e.preventDefault(); const sec=document.getElementById('sites'); if(sec) sec.scrollIntoView({behavior:'smooth',block:'start'}); return; }
+      const al=e.target.closest('.al'); const l=e.target.closest('[data-al]')||(al&&al.querySelector('[data-al]')); if(!l) return; e.preventDefault();
+      if(GRAND&&window.gvOuvrir) window.gvOuvrir(l.dataset.al);
+      const art=document.querySelector('article.site[data-code="'+CSS.escape(l.dataset.al)+'"]');
       if(!art) return; art.scrollIntoView({behavior:'smooth',block:'start'}); art.classList.remove('al-flash'); void art.offsetWidth; art.classList.add('al-flash'); };
   })();
   /* La frise et la décomposition suivent le même ordre : trois sections qui
@@ -735,7 +861,7 @@ Object.keys(parSite).forEach(code=>{ parSite[code]=Object.values(parSite[code]).
   const np=notePhotoAvec(REF,obs,p.id); p.Lph=np&&np.L; p.ptsPh=np?np.pts:null; p.ag=agentPhoto(p.id,obs); return p; }).filter(p=>!p.prive).sort((x,y)=>x.ts.localeCompare(y.ts)); });
 /* Les cartes d'îlots peuvent être dessinées après ce code : on pose les vignettes quand elles sont là. */
 function poserBandeaux(){ Object.keys(parSite).forEach(code=>{ const l=parSite[code];
-const art=[...document.querySelectorAll('article.site')].find(x=>((x.querySelector('.site-code')||{}).textContent||'').includes(code));
+const art=document.querySelector('article.site[data-code="'+CSS.escape(code)+'"]');
 if(!art||!l.length||art.dataset.pjFait) return; art.dataset.pjFait='1';
 const fig=art.querySelector('figure.preuve');
 const lien=fig&&fig.querySelector('a');
@@ -748,7 +874,7 @@ div.innerHTML='<div class="pj-strip-t">'+l.length+' photos '+(j===auj?"aujourd'h
 if(fig) fig.after(div); else { const sb=art.querySelector('.scorebox'); if(sb) sb.after(div); else art.appendChild(div); }
 }); }
 poserBandeaux(); setTimeout(poserBandeaux,0); setTimeout(poserBandeaux,800);
-{ const gr=document.getElementById('sites'); if(gr) new MutationObserver(poserBandeaux).observe(gr,{childList:true}); }
+{ const gr=document.getElementById('sites'); if(gr) new MutationObserver(poserBandeaux).observe(gr,{childList:true,subtree:true}); }
 let VUE=[];
 function zoom(id,liste){
 VUE=liste||[]; let i=VUE.findIndex(p=>p.id===id); if(i<0) return;
@@ -777,10 +903,10 @@ document.addEventListener('click',e=>{ const a=e.target.closest('[data-fd-zoom]'
 })(); }catch(e){ console.warn('Photos du jour', e); } // jamais au détriment du reste de la page
 
 // Îlots
-document.getElementById('sites').innerHTML = sites.map(s=>{
+function carteIlot(s){
     const niv = s.niveau===null?INCONNU:NIV[s.niveau];
     const vieux = s.dernier && jours(s.dernier)>7;
-    return '<article class="site">'
+    return '<article class="site" data-code="'+esc(s.site)+'">'
       +'<div class="site-top">'
         +'<div class="wx '+niv.cls+'" title="'+esc('Météo du jour : '+niv.lab+' (le plus mauvais constat parmi propreté et remplissage)')+'">'+icon(niv.wx,26)+'</div>'
         +'<div style="min-width:0;flex:1">'
@@ -813,9 +939,78 @@ document.getElementById('sites').innerHTML = sites.map(s=>{
       }).join('')+'</div>'
     +dOuVient(s)
       +'</article>';
-  }).join('');
+}
+if(!GRAND) document.getElementById('sites').innerHTML = sites.map(carteIlot).join('');
+else {
+  /* Grande ville : un tableau de secteurs (note la plus basse, points, D/E, jamais relevés),
+     une recherche par rue ou par code, des filtres ; un secteur ouvert montre ses points
+     30 par 30. Les cartes d'îlots ne sont fabriquées qu'à l'ouverture. */
+  const box=document.getElementById('sites');
+  const LOT=30; let FILTRE='tous', Q='';
+  const norm=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const garde=s=>{
+    if(FILTRE==='pb'&&!(s.L&&(s.L.l==='D'||s.L.l==='E'||s.L.l==='C'))) return false;
+    if(FILTRE==='jamais'&&s.dernier) return false;
+    if(FILTRE==='retard'&&!(s.dernier&&jours(s.dernier)>JOURS_ALERTE)) return false;
+    if(Q&&!(norm(s.site).includes(Q)||norm(s.nom).includes(Q))) return false;
+    return true;
+  };
+  const triNote=(a,b)=>(b.L?'ABCDE'.indexOf(b.L.l):-1)-(a.L?'ABCDE'.indexOf(a.L.l):-1)||parFraicheur(a,b);
+  box.innerHTML='<div class="gv">'
+    +'<div class="gv-outils"><input type="search" id="gv-q" placeholder="Rechercher une rue ou un code (ex. Garibaldi, '+esc((sites[0]||{}).site||'')+')" aria-label="Rechercher un point">'
+    +'<button type="button" class="gv-f" data-f="tous" aria-pressed="true">Tous</button>'
+    +'<button type="button" class="gv-f" data-f="pb" aria-pressed="false">Problèmes (C à E)</button>'
+    +'<button type="button" class="gv-f" data-f="retard" aria-pressed="false">En retard</button>'
+    +'<button type="button" class="gv-f" data-f="jamais" aria-pressed="false">Jamais relevés</button></div>'
+    +'<p class="gv-vide" id="gv-resume"></p><div id="gv-liste"></div></div>';
+  const liste=box.querySelector('#gv-liste');
+  function dessiner(){
+    let nTot=0;
+    const html=SECTEURS.map(x=>{
+      const l=x.sites.filter(garde); if(!l.length) return '';
+      nTot+=l.length;
+      const L=x.pire, ouvert=!!Q;
+      return '<details class="gv-sect" data-sect="'+x.id+'"'+(ouvert?' open':'')+'><summary>'
+        +'<span class="gv-l" style="background:'+(L?'var('+L.var+')':'var(--sOff)')+'" title="Note la plus basse du secteur">'+(L?L.l:'?')+'</span>'
+        +'<span class="gv-n">'+esc(x.nom)+(x.rue?' — '+esc(x.rue):'')+'<small>'+l.length+' point'+(l.length>1?'s':'')+(l.length!==x.sites.length?' sur '+x.sites.length:'')+' · '+x.nNotes+' noté'+(x.nNotes>1?'s':'')+'</small></span>'
+        +'<span class="gv-c">'+(x.nDE?x.nDE+' D/E<br>':'')+(x.nRetard?x.nRetard+' en retard<br>':'')+(x.nJamais?x.nJamais+' jamais':'')+'</span>'
+        +'</summary><div class="gv-corps"></div></details>';
+    }).join('');
+    liste.innerHTML=html||'<p class="gv-vide">Aucun point ne correspond.</p>';
+    box.querySelector('#gv-resume').textContent=sites.length+' points répartis en '+SECTEURS.length+' secteurs'+(nTot!==sites.length?' · '+nTot+' affichés':'')+'. Touchez un secteur pour voir ses points.';
+    if(Q) liste.querySelectorAll('details.gv-sect').forEach(d=>remplir(d,0));
+  }
+  function remplir(d,depuis){
+    const x=SECTEURS.find(y=>y.id===d.dataset.sect); if(!x) return;
+    const l=x.sites.filter(garde).sort(triNote), corps=d.querySelector('.gv-corps');
+    const morceau=l.slice(depuis,depuis+LOT).map(carteIlot).join('');
+    if(!depuis) corps.innerHTML='<div class="grid">'+morceau+'</div>';
+    else corps.querySelector('.grid').insertAdjacentHTML('beforeend',morceau);
+    const b=corps.querySelector('.gv-plus'); if(b) b.remove();
+    if(l.length>depuis+LOT) corps.insertAdjacentHTML('beforeend','<button type="button" class="gv-plus" data-depuis="'+(depuis+LOT)+'">Afficher '+Math.min(LOT,l.length-depuis-LOT)+' points de plus ('+(l.length-depuis-LOT)+' restants)</button>');
+  }
+  liste.addEventListener('toggle',e=>{ const d=e.target; if(d.matches&&d.matches('details.gv-sect')&&d.open&&!d.querySelector('article.site')) remplir(d,0); },true);
+  liste.addEventListener('click',e=>{ const b=e.target.closest('.gv-plus'); if(!b) return; remplir(b.closest('details.gv-sect'),+b.dataset.depuis); });
+  let minu=null;
+  box.querySelector('#gv-q').addEventListener('input',e=>{ clearTimeout(minu); minu=setTimeout(()=>{ Q=norm(e.target.value.trim()); dessiner(); },250); });
+  box.querySelectorAll('.gv-f').forEach(b=>b.addEventListener('click',()=>{ FILTRE=b.dataset.f; box.querySelectorAll('.gv-f').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); dessiner(); }));
+  /* Depuis une alerte ou la carte : ouvre le secteur du point et fabrique sa carte. */
+  window.gvOuvrir=code=>{
+    const s=sites.find(y=>y.site===code); if(!s) return;
+    if(!garde(s)){ FILTRE='tous'; Q=''; box.querySelector('#gv-q').value=''; box.querySelectorAll('.gv-f').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.f==='tous'))); dessiner(); }
+    const d=liste.querySelector('details.gv-sect[data-sect="'+s.secteur+'"]'); if(!d) return;
+    d.open=true; if(!d.querySelector('article.site')) remplir(d,0);
+    if(!d.querySelector('article.site[data-code="'+CSS.escape(code)+'"]')) d.querySelector('.grid').insertAdjacentHTML('afterbegin',carteIlot(s));
+  };
+  window.gvSecteur=id=>{ const d=liste.querySelector('details.gv-sect[data-sect="'+id+'"]'); if(!d) return; d.open=true; if(!d.querySelector('article.site')) remplir(d,0); d.scrollIntoView({behavior:'smooth',block:'start'}); };
+  dessiner();
+}
 
   // Carte
+  /* Grande ville : la carte montre les secteurs (cercle = nombre de points, couleur = note
+     la plus basse) ; un appui sur un secteur zoome dessus et montre ses points un par un. */
+  if(GRAND){ dessinerCarteGV(sites,SECTEURS); }
+  else {
   const lats=sites.map(s=>s.lat), lons=sites.map(s=>s.lon);
   const latMin=Math.min(...lats), latMax=Math.max(...lats), lonMin=Math.min(...lons), lonMax=Math.max(...lons);
   const latMoy=(latMin+latMax)/2, kx=Math.cos(latMoy*Math.PI/180);
@@ -845,6 +1040,7 @@ document.getElementById('sites').innerHTML = sites.map(s=>{
   g+='<text x="748" y="486" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="var(--ink-3)">N</text>'
    +'<path d="M748 476 L744 466 L748 469 L752 466 Z" fill="var(--ink-2)"/>';
   document.getElementById('map').innerHTML=g;
+  }
   document.getElementById('maplegend').innerHTML =
     LETTRES.map(x=>'<span><i class="swatch" style="background:var('+x.var+')"></i><b style="font-family:var(--mono)">'+x.l+'</b> '+x.lab+'</span>').join('')
     +'<span><i class="swatch" style="background:var(--sOff)"></i><b style="font-family:var(--mono)">?</b> Non noté</span>';
@@ -916,7 +1112,10 @@ document.getElementById('sites').innerHTML = sites.map(s=>{
       +(photos?'<div class="fd-ph">'+photos+'</div>':'<p class="fd-v">Pas de photo pour ce passage.</p>')
       +'<ul class="fd-f">'+constats+'</ul>';
   }
-  document.getElementById('frise').innerHTML = commeLesCartes(passagesParSite(obs)).map(s=>{
+  /* Grande ville : seulement les îlots déjà relevés, les 40 plus récents. */
+  const friseTous=commeLesCartes(passagesParSite(obs)).filter(s=>!GRAND||s.lots.length);
+  const friseVus=GRAND?friseTous.slice(0,40):friseTous;
+  document.getElementById('frise').innerHTML = friseVus.map(s=>{
     const lots=s.lots.slice(-MAXP);
     FRISE[s.site]=lots;
     const cells=lots.map((l,i)=>{
@@ -949,7 +1148,7 @@ document.getElementById('sites').innerHTML = sites.map(s=>{
       +'<div>'+(lots.length?'<div class="fr-cells">'+cells+'</div><div class="fr-sum">'+esc(resume)+'</div><div class="fr-det" hidden></div>'
                           :'<div class="fr-vide">Jamais relevé</div>')+'</div>'
     +'</div>';
-  }).join('');
+  }).join('') + (GRAND?'<p class="fr-vide" style="padding:10px 2px">'+(friseTous.length>friseVus.length?'Les '+friseVus.length+' îlots relevés le plus récemment sont affichés sur '+friseTous.length+'. ':'')+'Les îlots jamais relevés n\'apparaissent pas ici : voir « État des îlots ».</p>':'');
 
   /* « D’où vient la note », dépliable dans chaque carte : les points du flux
      qui fixe la note, répartis entre les critères du barème actif. Déclarée
