@@ -32,5 +32,8 @@
   },
   "meteo": {
     "seuilGrandeVille": 200
+  },
+  "avis": {
+    "apresEnvois": 10
   }
 }
