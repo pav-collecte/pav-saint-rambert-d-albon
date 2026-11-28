@@ -266,6 +266,21 @@ et « Envoyer » juste dessous, sous le même pouce. */
 .annul small { font-size: .76rem; color: var(--muted); font-family: var(--font-mono); }
 .annul:disabled { opacity: .5; cursor: default; }
 .annul:active:not(:disabled) { background: var(--bg); }
+/* Proposition d'installation sur l'écran d'accueil (apparaît toute seule), au centre de l'écran. */
+.inst { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 60;
+  width: min(92vw, 420px); box-sizing: border-box;
+  background: var(--surface); color: var(--ink); border: 2px solid var(--ok); border-radius: 18px; padding: 20px 18px 18px;
+  box-shadow: 0 0 0 100vmax rgba(0,0,0,.55), 0 12px 34px rgba(0,0,0,.35);
+  font: 500 16px/1.45 var(--font-ui); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; }
+.inst[hidden] { display: none; }
+.inst img { width: 64px; height: 64px; border-radius: 14px; flex: none; }
+.inst b { display: block; font-size: 1.2rem; margin-bottom: 4px; color: var(--ink); }
+.inst .inst-t { width: 100%; }
+.inst #inst-txt { color: var(--ink); }
+.inst .inst-a { display: flex; gap: 10px; margin-top: 14px; justify-content: center; flex-wrap: wrap; }
+.inst button { appearance: none; cursor: pointer; border-radius: 12px; padding: 12px 18px; font: 700 16px var(--font-ui); min-width: 130px; }
+.inst .inst-ok { background: var(--ok); color: var(--surface); border: 0; }
+.inst .inst-non { background: transparent; color: var(--ink); border: 1.5px solid var(--line); }
 .flash {
   background: var(--surface); border: 1px solid var(--ok); border-left: 4px solid var(--ok);
   border-radius: 0 12px 12px 0; padding: 12px 14px;
@@ -718,6 +733,11 @@ fois confirmés sur place par un agent. Masqué quand il n'y en a pas. -->
 
 <!-- Code d'accès : une seule information à retenir, donc une seule feuille,
      sans réglage ni option. -->
+<div class="inst" id="inst" role="dialog" aria-labelledby="inst-b" hidden>
+  <img src="icon-192.png" alt="">
+  <div class="inst-t"><b id="inst-b">Installer l'appli sur ton téléphone</b><span id="inst-txt">Une icône sur l'écran d'accueil : l'appli s'ouvre en plein écran, comme une vraie application.</span>
+    <div class="inst-a"><button type="button" class="inst-ok" id="inst-ok">Installer</button><button type="button" class="inst-non" id="inst-non">Plus tard</button></div></div>
+</div>
 <div class="sheet" id="code-s" hidden>
   <div class="sheet-c" role="dialog" aria-modal="true" aria-labelledby="code-t">
     <h2 id="code-t">Code d'accès</h2>
@@ -2930,5 +2950,52 @@ try { dessiner(document.getElementById('qr'), adresse); } catch {}
 
 <script src="avis.js" data-page="collecte" defer></script>
 <script src="edition.js?v=20261127b" data-cartes="#round li:not(.vgs)" defer></script>
+<script>
+/* Installation sur l'écran d'accueil, proposée automatiquement tant que l'appli est ouverte
+   dans le navigateur. Android / Chrome : la fenêtre d'installation du système. iPhone : le
+   geste à faire (Partager → « Sur l'écran d'accueil »). « Plus tard » : reproposé 3 jours après. */
+(function () {
+  var b = document.getElementById("inst"); if (!b) return;
+  var installee = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+  var CLE = "pav-install-plus-tard", invite = null, montre = false;
+  /* Déjà installée : ouverte depuis l'icône, ou installée un jour depuis ce navigateur. */
+  if (installee) { try { localStorage.setItem("pav-installee", "1"); } catch (e) {} return; }
+  try { if (localStorage.getItem("pav-installee") === "1") return; } catch (e) {}
+  var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  var lire = function () { try { return Number(localStorage.getItem(CLE)) || 0; } catch (e) { return 0; } };
+  function montrer() {
+    if (montre || Date.now() - lire() < 3 * 864e5) return;
+    var code = document.getElementById("code-s"); if (code && !code.hidden) { setTimeout(montrer, 4000); return; }
+    if (ios) {
+      document.getElementById("inst-txt").innerHTML = "Touche <b style=\"display:inline;font-size:inherit\">Partager</b> (le carré avec une flèche ⬆️) en bas de Safari, puis <b style=\"display:inline;font-size:inherit\">« Sur l'écran d'accueil »</b>. Garde ton code : l'appli installée te le redemandera une fois.";
+      document.getElementById("inst-ok").textContent = "J'ai compris";
+    } else if (!invite) {
+      document.getElementById("inst-txt").textContent = "Ouvre le menu du navigateur (⋮ en haut à droite) puis « Ajouter à l'écran d'accueil » ou « Installer l'application ».";
+      document.getElementById("inst-ok").textContent = "J'ai compris";
+    }
+    montre = true; b.hidden = false;
+  }
+  window.addEventListener("beforeinstallprompt", function (e) {
+    e.preventDefault(); invite = e;
+    document.getElementById("inst-txt").textContent = "Une icône sur l'écran d'accueil : l'appli s'ouvre en plein écran, comme une vraie application.";
+    document.getElementById("inst-ok").textContent = "Installer";
+    if (montre) return; setTimeout(montrer, 2500);
+  });
+  window.addEventListener("appinstalled", function () { b.hidden = true; invite = null; try { localStorage.setItem("pav-installee", "1"); } catch (e) {} });
+  document.getElementById("inst-ok").addEventListener("click", function () {
+    if (!invite) { b.hidden = true; try { localStorage.setItem(CLE, String(Date.now())); } catch (e) {} return; }
+    invite.prompt();
+    (invite.userChoice || Promise.resolve({})).then(function (c) {
+      b.hidden = true; invite = null;
+      if (!c || c.outcome !== "accepted") { try { localStorage.setItem(CLE, String(Date.now())); } catch (e) {} }
+    });
+  });
+  document.getElementById("inst-non").addEventListener("click", function () { b.hidden = true; try { localStorage.setItem(CLE, String(Date.now())); } catch (e) {} });
+  /* Sans fenêtre système (iPhone, Firefox…) : le mode d'emploi s'affiche après quelques secondes. */
+  /* Chrome, Edge, Samsung : sans fenêtre système, c'est que l'appli est déjà installée → rien. */
+  var gereInstall = "onbeforeinstallprompt" in window;
+  setTimeout(function () { if (!invite && (ios || !gereInstall)) montrer(); }, ios ? 4000 : 9000);
+})();
+</script>
 </body>
 </html>
