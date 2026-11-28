@@ -109,7 +109,15 @@ section{margin-top:40px}
 .badge{font-size:.64rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
 
 .mapwrap{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
-.mapwrap svg{display:block;width:100%;height:auto;max-width:100%}
+.mapwrap > svg{display:block;width:100%;height:auto;max-width:100%}
+.leaflet-attribution-flag{display:none!important}
+/* Vraie carte (OpenStreetMap). Le schéma SVG reste en secours si elle ne charge pas. */
+#lmap{height:440px;border-radius:8px;overflow:hidden;z-index:0}
+@media (max-width:600px){#lmap{height:380px}}
+.lm{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;color:#fff;font:700 14px "IBM Plex Mono",monospace;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.lmc{display:grid;place-items:center;border-radius:50%;color:#fff;font:700 13px "IBM Plex Mono",monospace;border:3px solid rgba(255,255,255,.9);box-shadow:0 1px 5px rgba(0,0,0,.35)}
+.lpop b{display:block;font-size:14px}.lpop small{color:#666;font-family:"IBM Plex Mono",monospace}
+.lpop a{display:inline-block;margin-top:6px;font-weight:600}
 .maplegend{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:12px;font-size:.76rem;color:var(--ink-2)}
 .maplegend span{display:inline-flex;align-items:center;gap:6px}
 /* Retour vers le site qui a amené ici. Caché par défaut : il n'apparaît que
@@ -457,9 +465,10 @@ details[open] summary{margin-bottom:8px}
 <section>
   <div class="sechead">
     <h2>Carte des îlots</h2>
-    <p>Positions réelles, à l'échelle, d'après les coordonnées du référentiel.</p>
+    <p>Positions réelles sur fond OpenStreetMap. Touchez un point pour sa note et sa fiche.</p>
   </div>
   <div class="mapwrap">
+    <div id="lmap" hidden></div>
     <svg id="map" viewBox="0 0 800 520" role="img" aria-label="Carte schématique des six îlots de collecte de la commune"></svg>
     <div class="maplegend" id="maplegend"></div>
   </div>
@@ -581,6 +590,60 @@ function poserSecteurs(sites){
     return x;
   }).sort((a,b)=>a.r-b.r||a.c-b.c);
 }
+/* Vraie carte : Leaflet et les fonds OpenStreetMap, chargés à la demande. Grande ville : les
+   points proches se regroupent (cercle = nombre de points, couleur = note la plus basse) et se
+   séparent en zoomant. Si la bibliothèque ou les fonds ne chargent pas, le schéma reste. */
+let LEAF=null;
+function chargerLeaflet(){
+  if(LEAF) return LEAF;
+  const css=h=>{ const l=document.createElement('link'); l.rel='stylesheet'; l.href=h; document.head.appendChild(l); };
+  const js=h=>new Promise((ok,ko)=>{ const t=document.createElement('script'); t.src=h; t.onload=ok; t.onerror=ko; document.head.appendChild(t); });
+  css('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
+  css('https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css');
+  LEAF=Promise.race([
+    js('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js').then(()=>js('https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js')).then(()=>window.L),
+    new Promise((_,ko)=>setTimeout(()=>ko(new Error('délai')),8000))]);
+  return LEAF;
+}
+let LCARTE=null, LCOUCHE=null;
+function carteReelle(sites,grand){
+  const div=document.getElementById('lmap'), svg=document.getElementById('map'); if(!div) return;
+  const ok=sites.filter(s=>isFinite(s.lat)&&isFinite(s.lon)&&!(s.lat===0&&s.lon===0)); if(!ok.length) return;
+  chargerLeaflet().then(L=>{
+    if(!L||!L.map) return;
+    div.hidden=false;
+    if(!LCARTE){
+      LCARTE=L.map(div,{scrollWheelZoom:false,tap:true});
+      LCARTE.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; contributeurs <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(LCARTE);
+    }
+    if(LCOUCHE) LCARTE.removeLayer(LCOUCHE);
+    const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim()||'#999';
+    const ordreL=l=>l?'ABCDE'.indexOf(l):-1;
+    const coul=l=>css(l?'--s'+l:'--sOff');
+    LCOUCHE=(grand&&L.markerClusterGroup)?L.markerClusterGroup({maxClusterRadius:50,showCoverageOnHover:false,
+      iconCreateFunction:c=>{ const m=c.getAllChildMarkers(); const pire=m.reduce((p,x)=>ordreL(x.options.lettre)>ordreL(p)?x.options.lettre:p,null);
+        const n=m.length, t=n<10?34:n<100?40:n<1000?48:56;
+        return L.divIcon({html:'<span class="lmc" style="width:'+t+'px;height:'+t+'px;background:'+coul(pire)+'">'+n+'</span>',className:'',iconSize:[t,t]}); }})
+      : L.layerGroup();
+    ok.forEach(s=>{
+      const l=s.L?s.L.l:null;
+      const m=L.marker([s.lat,s.lon],{lettre:l,title:s.site+' — '+s.nom,
+        icon:L.divIcon({html:'<span class="lm" style="background:'+coul(l)+'">'+(l||'?')+'</span>',className:'',iconSize:[30,30],iconAnchor:[15,15]})});
+      m.bindPopup('<div class="lpop"><small>'+esc(s.site)+'</small><b>'+esc(s.nom)+'</b>'+(s.L?'Bac-Score '+s.L.l+' — '+esc(s.L.lab):'Non noté')
+        +'<br>'+(s.dernier?'relevé '+esc(dateFR(s.dernier)):'jamais relevé')+'<br><a href="#" data-fiche="'+esc(s.site)+'">Voir la fiche ›</a></div>');
+      LCOUCHE.addLayer(m);
+    });
+    LCOUCHE.addTo(LCARTE);
+    LCARTE.fitBounds(L.latLngBounds(ok.map(s=>[s.lat,s.lon])).pad(0.08),{maxZoom:17});
+    setTimeout(()=>LCARTE.invalidateSize(),200);
+    if(svg) svg.style.display='none';
+  }).catch(()=>{ div.hidden=true; if(svg) svg.style.display=''; });
+}
+document.addEventListener('click',e=>{ const a=e.target.closest('[data-fiche]'); if(!a) return; e.preventDefault();
+  const code=a.dataset.fiche; if(window.gvOuvrir) window.gvOuvrir(code);
+  const art=document.querySelector('article.site[data-code="'+CSS.escape(code)+'"]');
+  if(art){ art.scrollIntoView({behavior:'smooth',block:'start'}); art.classList.remove('al-flash'); void art.offsetWidth; art.classList.add('al-flash'); } });
 /* Carte « grande ville » : vue des secteurs, puis zoom sur un secteur. */
 function dessinerCarteGV(sites,SECTEURS){
   const map=document.getElementById('map'); if(!map) return;
@@ -1041,6 +1104,7 @@ else {
    +'<path d="M748 476 L744 466 L748 469 L752 466 Z" fill="var(--ink-2)"/>';
   document.getElementById('map').innerHTML=g;
   }
+  carteReelle(sites,GRAND);
   document.getElementById('maplegend').innerHTML =
     LETTRES.map(x=>'<span><i class="swatch" style="background:var('+x.var+')"></i><b style="font-family:var(--mono)">'+x.l+'</b> '+x.lab+'</span>').join('')
     +'<span><i class="swatch" style="background:var(--sOff)"></i><b style="font-family:var(--mono)">?</b> Non noté</span>';
