@@ -482,6 +482,9 @@ et « Envoyer » juste dessous, sous le même pouce. */
   .av-tg { appearance:none; border:0; background:transparent; padding:0; margin:0; width:100%; text-align:left; font:inherit; color:inherit; cursor:pointer; }
   .av-tg .av-ch { margin-left:auto; font-size:.85rem; color: var(--ok); font-weight:600; flex:none; }
   .av-plus { margin:2px 0 0; font-size:.82rem; color: var(--muted); }
+  .av-jg { height:10px; border-radius:6px; background: color-mix(in srgb, var(--ok) 18%, var(--surface)); overflow:hidden; }
+  .av-jg > div { height:100%; width:0; background: var(--ok); border-radius:6px; transition: width .6s ease; }
+  .av-jt { font-size:.82rem; color: var(--ink); margin:4px 0 0; }
   .av-tout { appearance:none; cursor:pointer; margin-top:4px; padding:11px 12px; border-radius:10px; border:1.5px dashed var(--ok); background:transparent; color: var(--ink); font: 600 .9rem var(--font-ui); }
   .rd-tg { appearance:none; border:0; background:transparent; padding:0; font:inherit; color:inherit; cursor:pointer; display:flex; align-items:baseline; gap:8px; width:100%; text-align:left; }
   .rd-tg .rd-ch { margin-left:auto; font-weight:600; }
@@ -587,6 +590,7 @@ fois confirmés sur place par un agent. Masqué quand il n'y en a pas. -->
 <ul class="av-liste" id="averif-l"></ul>
 <p class="av-plus" id="averif-plus" hidden></p>
 <button type="button" class="av-tout" id="averif-tout" hidden></button>
+<div id="averif-jauge" hidden><div class="av-jg"><div></div></div><p class="av-jt"></p></div>
 </div>
 
 <div class="point">
@@ -2715,22 +2719,30 @@ $("averif-tout").addEventListener("click", async () => {
   if (!navigator.onLine) { alert("Pas de réseau : réessaie quand le téléphone capte."); return; }
   if (!confirm(`Valider les ${n} points à vérifier sans les visiter ?\n\nIls entrent tous dans la tournée, à la position de la carte et avec les conteneurs annoncés. Les points inexistants devront ensuite être retirés depuis la console.`)) return;
   averifEnvoi = true; b.disabled = true; b.textContent = `Validation de ${n} points…`;
+  /* Jauge : le serveur répond en une fois (jusqu'à une minute pour une grande ville) ; elle avance
+     doucement jusqu'à 90 % pendant l'attente, puis 100 % à la réponse. */
+  const jg = $("averif-jauge"), barre = jg.querySelector(".av-jg > div"), jt = jg.querySelector(".av-jt");
+  let pct = 3; jg.hidden = false; barre.style.width = pct + "%"; jt.textContent = `Mise en service de ${n} points… ${pct} %`;
+  const tic = setInterval(() => { pct += (90 - pct) * 0.05; barre.style.width = pct + "%"; jt.textContent = `Mise en service de ${n} points… ${Math.round(pct)} %`; }, 700);
+  const finJauge = ok => { clearInterval(tic); barre.style.width = "100%"; jt.textContent = ok ? "Terminé — 100 %" : "Interrompu"; setTimeout(() => { jg.hidden = true; }, ok ? 2500 : 6000); };
+  let reussi = false;
   try {
     const fd = new FormData();
     fd.append("code", CODE); fd.append("commune", (CONF.commune && CONF.commune.nom) || ""); fd.append("action", "valider-tous");
     const r = await fetch(url, { method: "POST", body: fd });
     let j = null; try { j = await r.json(); } catch {}
-    if (r.status === 401 || r.status === 403) { alert((j && j.motif) || "Réservé aux administrateurs : code refusé."); return; }
+    if (r.status === 401 || r.status === 403) { alert((j && j.motif) || "Le serveur a refusé ton code pour cette action. Réessaie après avoir rouvert l'appli."); return; }
     if (!r.ok || !j || !j.ok) { alert((j && j.motif) || `Le serveur a répondu ${r.status} : réessaie plus tard.`); return; }
     const t = Date.now();
     A_VERIFIER.forEach(s => { VALIDES[s.code] = { t, site: { code: s.code, nom: s.nom, lat: s.lat, lon: s.lon, postes: Object.keys(s.postes).length ? s.postes : { ordures_menageres: 1 } } }; });
     sauverValides(); appliquerValides(); A_VERIFIER = []; sauverAVerifier(); averifOuvert = null;
+    reussi = true;
     $("flash-t").textContent = `${j.n || n} points validés`;
     $("flash-s").textContent = "Ils sont dans la tournée dès maintenant.";
     $("flash").hidden = false;
     rendre(); rendreAVerifier(true);
   } catch { alert("Réseau indisponible : réessaie dans un instant."); }
-  finally { averifEnvoi = false; b.disabled = false; }
+  finally { averifEnvoi = false; b.disabled = false; finJauge(reussi); }
 });
 $("averif-l").addEventListener("click", e => {
     const t = e.target;
