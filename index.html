@@ -479,6 +479,13 @@ et « Envoyer » juste dessous, sous le même pouce. */
   .av-t { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 1.05rem; color: var(--ink); }
   .av-t svg { width: 22px; height: 22px; flex: none; color: var(--ok); }
   .av-s { margin: -4px 0 0 31px; font-size: .82rem; color: var(--muted); }
+  .av-tg { appearance:none; border:0; background:transparent; padding:0; margin:0; width:100%; text-align:left; font:inherit; color:inherit; cursor:pointer; }
+  .av-tg .av-ch { margin-left:auto; font-size:.85rem; color: var(--ok); font-weight:600; flex:none; }
+  .av-plus { margin:2px 0 0; font-size:.82rem; color: var(--muted); }
+  .av-tout { appearance:none; cursor:pointer; margin-top:4px; padding:11px 12px; border-radius:10px; border:1.5px dashed var(--ok); background:transparent; color: var(--ink); font: 600 .9rem var(--font-ui); }
+  .rd-tg { appearance:none; border:0; background:transparent; padding:0; font:inherit; color:inherit; cursor:pointer; display:flex; align-items:baseline; gap:8px; width:100%; text-align:left; }
+  .rd-tg .rd-ch { margin-left:auto; font-weight:600; }
+  .round > li.rd-plus > button { justify-content:center; font-weight:600; }
   .av-liste { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
   .av-liste > li { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
   .av-liste > li.ouvert { border-color: var(--ok); border-width: 1.5px; }
@@ -575,9 +582,11 @@ fois confirmés sur place par un agent. Masqué quand il n'y en a pas. -->
 <div class="averif" id="nouv" hidden></div>
 <div id="lien-admin" hidden style="margin:12px 0"><a class="nv-b" href="admin.html" style="text-align:center;text-decoration:none;border-style:solid;display:flex;align-items:center;justify-content:center;gap:8px"><svg class="ic-b" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.5"/><path d="M15.8 14.6c2.3.1 4 1.6 4.6 4.4"/></svg>Gérer les agents de la commune</a></div>
 <div class="averif" id="averif" hidden>
-<div class="av-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><path d="m9 10 2 2 4-4"/></svg><span id="averif-t"></span></div>
+<button type="button" class="av-tg" id="averif-tg" aria-expanded="true"><div class="av-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><path d="m9 10 2 2 4-4"/></svg><span id="averif-t"></span><span class="av-ch" id="averif-ch"></span></div></button>
 <p class="av-s" id="averif-s"></p>
 <ul class="av-liste" id="averif-l"></ul>
+<p class="av-plus" id="averif-plus" hidden></p>
+<button type="button" class="av-tout" id="averif-tout" hidden></button>
 </div>
 
 <div class="point">
@@ -635,7 +644,7 @@ fois confirmés sur place par un agent. Masqué quand il n'y en a pas. -->
   </div>
 
   <div>
-    <span class="eyebrow">Points de collecte — appuie pour en choisir un</span>
+    <button type="button" class="rd-tg eyebrow" id="round-tg" aria-expanded="true"><span id="round-t">Points de collecte — appuie pour en choisir un</span><span class="rd-ch" id="round-ch"></span></button>
     <ul class="round" id="round"></ul>
     <div class="actions">
       <button type="button" class="raz" id="raz" hidden>
@@ -960,6 +969,22 @@ async function chargerConfig() {
     }
   } catch {}   // hors ligne : la configuration en cache fait l'affaire
   appliquerConfig();
+  /* Commune tout juste créée : sa configuration arrive au passage suivant de n8n
+     (jusqu'à 15 minutes). On le dit, et on réessaie toutes les minutes. */
+  if (!CONF.commune || !CONF.commune.prefixeCode) {
+    if (!$("install-b")) {
+      const b = document.createElement("div"); b.id = "install-b"; b.className = "averif"; b.setAttribute("role", "status");
+      b.innerHTML = "<div class=\"av-t\"><span>Commune en cours d'installation</span></div><p class=\"av-s\" style=\"margin:0\">Sa configuration sera publiée d'ici quelques minutes. Laisse la page ouverte : elle se met à jour toute seule, puis te demandera ton code d'accès.</p>";
+      const p = document.querySelector(".point"); if (p) p.parentNode.insertBefore(b, p);
+    }
+    if (!chargerConfig.minuteur) chargerConfig.minuteur = setInterval(async () => {
+      try {
+        const r = await fetch("config.json", { cache: "no-store" }); if (!r.ok) return;
+        const c = await r.json();
+        if (c && c.commune && c.commune.prefixeCode) { clearInterval(chargerConfig.minuteur); location.reload(); }
+      } catch {}
+    }, 60000);
+  }
 }
 
 /* ── géométrie ─────────────────────────────────────────────────────────── */
@@ -1323,9 +1348,13 @@ function rendre() {
     $("retard-titre").textContent = retards.length > 1
       ? `${retards.length} points à relever en priorité` : "1 point à relever en priorité";
     $("retard-s").textContent = `Sans photo depuis ${seuil} jour${seuil > 1 ? "s" : ""} ou plus. Appuie sur un point pour le choisir.`;
-    $("retard-l").innerHTML = retards.map(x =>
+    /* Grandes villes : les 8 plus proches seulement, le reste est compté. */
+    const rt = position ? retards.slice().sort((a, b) => distance(position, a.s) - distance(position, b.s)) : retards;
+    const RT_MAX = 8, rtVus = rt.slice(0, RT_MAX);
+    $("retard-l").innerHTML = rtVus.map(x =>
       `<li><button type="button" data-code="${x.s.code}"><span>${x.s.nom}</span>` +
-      `<span class="j">${x.j === null ? "jamais relevé" : libJ(x.j)} &rsaquo;</span></button></li>`).join("");
+      `<span class="j">${x.j === null ? "jamais relevé" : libJ(x.j)} &rsaquo;</span></button></li>`).join("")
+      + (rt.length > RT_MAX ? `<li class="rt-plus" style="list-style:none;padding:6px 4px;font-size:.85rem;opacity:.8">… et ${rt.length - RT_MAX} autre${rt.length - RT_MAX > 1 ? "s" : ""} plus loin.</li>` : "");
   }
   $("compte").textContent = n === 0 ? "aucun point relevé"
     : `${n} point${n > 1 ? "s" : ""} · ${ph} photo${ph > 1 ? "s" : ""}`;
@@ -1371,7 +1400,22 @@ function rendre() {
      jamais se retrouver bloqué par un signal capricieux. */
   $("shoot").disabled = envoiEnCours;
 
-  $("round").innerHTML = SITES.map(s => {
+  /* Grandes villes : le point où l'on est (puis les plus proches) en tête, et
+     seulement les plus proches affichés tant qu'on ne demande pas tout. */
+  let ordre = SITES.slice();
+  if (position) ordre = ordre.map(s => ({ s, d: distance(position, s) })).sort((a, b) => a.d - b.d).map(x => x.s);
+  if (courant) ordre = [courant, ...ordre.filter(s => s.code !== courant.code)];
+  const nTotal = ordre.length;
+  let caches = 0;
+  if (ROUND_REPLIE) { ordre = courant ? [courant] : []; caches = nTotal - ordre.length; }
+  else if (!ROUND_TOUT && nTotal > ROUND_MAX) {
+    const garde = ordre.slice(0, ROUND_MAX), vus = new Set(garde.map(s => s.code));
+    ordre.slice(ROUND_MAX).forEach(s => { if (faits.get(s.code)) { garde.push(s); vus.add(s.code); } }); // déjà photographiés : toujours visibles
+    caches = nTotal - garde.length; ordre = garde;
+  }
+  $("round-ch").textContent = nTotal > 1 ? (ROUND_REPLIE ? `${nTotal} · afficher ▾` : `${nTotal} · replier ▴`) : "";
+  $("round-tg").setAttribute("aria-expanded", String(!ROUND_REPLIE));
+  $("round").innerHTML = ordre.map(s => {
     const k = faits.get(s.code) || 0;
     const duSite = vignettes.filter(x => x.site_code === s.code);
     const attente = duSite.filter(x => !x.envoye).length;
@@ -1412,12 +1456,29 @@ function rendre() {
         `</button></li>`;
     }
     return bloc;
-  }).join("");
+  }).join("") + (caches && !ROUND_REPLIE ? `<li class="rd-plus"><button type="button" data-tous="1">Afficher les ${caches} autres points (plus loin)</button></li>` : "");
 
   majFile();
 }
 
+var ROUND_MAX = 30, ROUND_TOUT = false, ROUND_REPLIE = false;
+try { ROUND_REPLIE = localStorage.getItem("pav-liste-repliee") === "1"; } catch {}
+$("round-tg").addEventListener("click", () => {
+  ROUND_REPLIE = !ROUND_REPLIE; ROUND_TOUT = false;
+  try { localStorage.setItem("pav-liste-repliee", ROUND_REPLIE ? "1" : "0"); } catch {}
+  rendre();
+});
+/* Le point où l'on arrive passe en tête : on redessine quand le plus proche change. */
+var procheVu = "";
+function suivreProche() {
+  if (!position || !SITES.length) return;
+  let m = null, md = Infinity;
+  for (const s of SITES) { const d = distance(position, s); if (d < md) { md = d; m = s; } }
+  const k = m ? m.code : "";
+  if (k !== procheVu) { procheVu = k; rendre(); }
+}
 function majGps() {
+  try { suivreProche(); } catch {}
   if (demo) { $("gps-txt").textContent = "Mode démo — position simulée sur " + (courant ? courant.code : "—"); return; }
   if (!position) { $("gps-txt").textContent = "GPS en cours d'acquisition"; return; }
   const r = identifierSite(position);
@@ -1548,6 +1609,7 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("loupe"
 const AVERTI_ENVOI = () => ENDPOINT ? "\n\nLes photos déjà transmises au serveur ne seront pas retirées de la base." : "";
 
 $("round").addEventListener("click", async e => {
+  if (e.target.closest("[data-tous]")) { ROUND_TOUT = true; rendre(); return; }
   const x = e.target.closest(".vg-x");
   if (x) { await supprimerPhotos([x.dataset.uuid]); return; }
 
@@ -2532,22 +2594,37 @@ function formulaireAVerifier(s) {
 /* Appelée à chaque rendu (donc à chaque position GPS) : tant qu'un point est
 ouvert, seule la distance change — sinon les compteurs saisis seraient
 remis à zéro à chaque mouvement du téléphone. */
+var AV_MAX = 25, AV_REPLIE = null;
+try { const v = localStorage.getItem("pav-averif-replie"); if (v) AV_REPLIE = v === "1"; } catch {}
 function rendreAVerifier(force) {
   const box = $("averif"); if (!box) return;
   const visibles = estAdmin() ? A_VERIFIER.length : 0; // réservé aux administrateurs terrain
   box.hidden = !visibles;
   if (!visibles) return;
+  /* Replié par défaut quand la liste est longue (grande ville) : seul le point
+     où l'on se trouve reste affiché. */
+  const replie = AV_REPLIE === null ? A_VERIFIER.length > 8 : AV_REPLIE;
   const ouvert = averifOuvert && A_VERIFIER.find(s => s.code === averifOuvert);
   if (ouvert && !force) { const p = $("av-dist"); if (p) p.textContent = texteDistance(ouvert); }
-  const liste = A_VERIFIER.map(s => ({ s, d: position ? Math.round(distance(position, s)) : null }))
+  const tri = A_VERIFIER.map(s => ({ s, d: position ? Math.round(distance(position, s)) : null }))
     .sort((a, b) => (a.d === null ? 1e9 : a.d) - (b.d === null ? 1e9 : b.d));
-  const ici = liste[0] && liste[0].d !== null && liste[0].d <= RAYON_M ? liste[0].s : null;
+  const ici = tri[0] && tri[0].d !== null && tri[0].d <= RAYON_M ? tri[0].s : null;
   const n = A_VERIFIER.length;
+  let liste = replie ? tri.filter(x => (ici && x.s === ici) || x.s.code === averifOuvert) : tri.slice(0, AV_MAX);
+  if (!replie && averifOuvert && !liste.some(x => x.s.code === averifOuvert)) liste = liste.concat(tri.filter(x => x.s.code === averifOuvert));
+  $("averif-ch").textContent = n > 1 ? (replie ? "afficher ▾" : "replier ▴") : "";
+  $("averif-tg").setAttribute("aria-expanded", String(!replie));
+  const reste = n - liste.length;
+  $("averif-plus").hidden = replie || reste <= 0;
+  $("averif-plus").textContent = `Les ${liste.length} plus proches sont affichés ; ${reste} autre${reste > 1 ? "s" : ""} plus loin.`;
+  $("averif-tout").hidden = replie || n < 2;
+  $("averif-tout").textContent = `Tout valider sans visite (${n} points)`;
   $("averif-t").textContent = ici ? `Point à vérifier ici : ${ici.nom}` : `${n} point${n > 1 ? "s" : ""} à vérifier sur place`;
   $("averif-s").textContent = ici
     ? "Repéré sur une carte, jamais vu sur place : confirme-le et compte ses conteneurs."
     : "Repérés sur une carte, jamais vus sur place. En passant devant, appuie dessus pour les confirmer.";
   if (ouvert && !force) return;
+  if (replie && !liste.length) { $("averif-l").innerHTML = ""; return; }
   $("averif-l").innerHTML = liste.map(x => {
       const o = averifOuvert === x.s.code;
       return `<li${o ? ' class="ouvert"' : ""}><button type="button" data-av="${esc(x.s.code)}" aria-expanded="${o}">`
@@ -2621,6 +2698,40 @@ async function envoyerTerrain(code, action) {
   }
 }
 
+$("averif-tg").addEventListener("click", () => {
+  const n = A_VERIFIER.length;
+  const actuel = AV_REPLIE === null ? n > 8 : AV_REPLIE;
+  AV_REPLIE = !actuel;
+  try { localStorage.setItem("pav-averif-replie", AV_REPLIE ? "1" : "0"); } catch {}
+  rendreAVerifier(true);
+});
+/* Grandes villes : mettre en service d'un coup tous les points repérés sur la carte,
+   sans visite. Administrateur seulement ; le serveur revérifie le rôle. */
+$("averif-tout").addEventListener("click", async () => {
+  const n = A_VERIFIER.length, b = $("averif-tout"), url = urlTerrain();
+  if (!n || averifEnvoi) return;
+  if (!url) { alert("Aucun serveur configuré."); return; }
+  if (!CODE) { ouvrirCode("Saisis ton code d'accès."); return; }
+  if (!navigator.onLine) { alert("Pas de réseau : réessaie quand le téléphone capte."); return; }
+  if (!confirm(`Valider les ${n} points à vérifier sans les visiter ?\n\nIls entrent tous dans la tournée, à la position de la carte et avec les conteneurs annoncés. Les points inexistants devront ensuite être retirés depuis la console.`)) return;
+  averifEnvoi = true; b.disabled = true; b.textContent = `Validation de ${n} points…`;
+  try {
+    const fd = new FormData();
+    fd.append("code", CODE); fd.append("commune", (CONF.commune && CONF.commune.nom) || ""); fd.append("action", "valider-tous");
+    const r = await fetch(url, { method: "POST", body: fd });
+    let j = null; try { j = await r.json(); } catch {}
+    if (r.status === 401 || r.status === 403) { alert((j && j.motif) || "Réservé aux administrateurs : code refusé."); return; }
+    if (!r.ok || !j || !j.ok) { alert((j && j.motif) || `Le serveur a répondu ${r.status} : réessaie plus tard.`); return; }
+    const t = Date.now();
+    A_VERIFIER.forEach(s => { VALIDES[s.code] = { t, site: { code: s.code, nom: s.nom, lat: s.lat, lon: s.lon, postes: Object.keys(s.postes).length ? s.postes : { ordures_menageres: 1 } } }; });
+    sauverValides(); appliquerValides(); A_VERIFIER = []; sauverAVerifier(); averifOuvert = null;
+    $("flash-t").textContent = `${j.n || n} points validés`;
+    $("flash-s").textContent = "Ils sont dans la tournée dès maintenant.";
+    $("flash").hidden = false;
+    rendre(); rendreAVerifier(true);
+  } catch { alert("Réseau indisponible : réessaie dans un instant."); }
+  finally { averifEnvoi = false; b.disabled = false; }
+});
 $("averif-l").addEventListener("click", e => {
     const t = e.target;
     const plus = t.closest("[data-plus]"), moins = t.closest("[data-moins]");
